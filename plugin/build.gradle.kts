@@ -6,9 +6,13 @@
  */
 
 plugins {
-    // Apply the Java Gradle plugin development plugin to add support for developing Gradle plugins
-    `java-gradle-plugin`
+    id("java-gradle-plugin")
+    id("maven-publish")
+    id("signing")
 }
+
+group = "com.onemillionworlds"
+version = "1.0.0"
 
 repositories {
     // Use Maven Central for resolving dependencies.
@@ -46,11 +50,60 @@ val functionalTest by tasks.registering(Test::class) {
 gradlePlugin.testSourceSets.add(functionalTestSourceSet)
 
 tasks.named<Task>("check") {
-    // Run the functional tests as part of `check`
     dependsOn(functionalTest)
 }
 
 tasks.named<Test>("test") {
-    // Use JUnit Jupiter for unit tests.
     useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            groupId = project.group.toString()
+            artifactId = "typed-materials"
+            version = project.version.toString()
+
+            from(components["java"])
+
+            pom {
+                name.set(project.name)
+                description.set("A library to create java classes for jMonkey materials")
+                url.set("https://github.com/oneMillionWorlds/TypedMaterials")
+                licenses {
+                    license {
+                        name.set("New BSD (3-clause) License")
+                        url.set("http://opensource.org/licenses/BSD-3-Clause")
+                    }
+                }
+                scm {
+                    connection.set("git@github.com:oneMillionWorlds/TypedMaterials.git")
+                    developerConnection.set("git@github.com:oneMillionWorlds/TypedMaterials.git")
+                    url.set("https://github.com/oneMillionWorlds/TypedMaterials")
+                }
+                developers {
+                    developer {
+                        id.set("RichardTingle")
+                        name.set("Richard Tingle (aka richtea)")
+                        email.set("support@oneMillionWorlds.com")
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "sonatype"
+            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            // url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+            credentials {
+                username = findProperty("ossrhUsername")?.toString() ?: ""
+                password = findProperty("ossrhPassword")?.toString() ?: ""
+            }
+        }
+    }
+}
+
+signing {
+    sign(publishing.publications["mavenJava"])
 }
