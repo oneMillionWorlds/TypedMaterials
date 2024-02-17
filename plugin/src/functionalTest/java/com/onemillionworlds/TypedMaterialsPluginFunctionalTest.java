@@ -68,7 +68,7 @@ class TypedMaterialsPluginFunctionalTest {
                 """
                     plugins {
                       id('java')
-                      id('com.onemillionworlds.typedmaterials')
+                      id('com.onemillionworlds.typed-materials')
                     };
                     """);
 
@@ -97,7 +97,7 @@ class TypedMaterialsPluginFunctionalTest {
                 """
                     plugins {
                       id('java')
-                      id('com.onemillionworlds.typedmaterials')
+                      id('com.onemillionworlds.typed-materials')
                     };
                     typedMaterials{
                       librariesToScan {
@@ -130,7 +130,7 @@ class TypedMaterialsPluginFunctionalTest {
                 """
                     plugins {
                       id('java')
-                      id('com.onemillionworlds.typedmaterials')
+                      id('com.onemillionworlds.typed-materials')
                     };
                     repositories {
                         mavenCentral()
@@ -178,7 +178,7 @@ class TypedMaterialsPluginFunctionalTest {
                 """
                     plugins {
                       id('java')
-                      id('com.onemillionworlds.typedmaterials')
+                      id('com.onemillionworlds.typed-materials')
                     };
                     repositories {
                         mavenCentral()
