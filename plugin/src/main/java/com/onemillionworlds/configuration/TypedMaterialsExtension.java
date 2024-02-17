@@ -7,7 +7,9 @@ import org.gradle.api.model.ObjectFactory;
 
 public class TypedMaterialsExtension{
 
-    private final NamedDomainObjectContainer<MaterialConfiguration> configurations;
+    private boolean enableLibraryMaterialsSearch = true;
+
+    private final NamedDomainObjectContainer<MaterialConfiguration> librariesToScan;
 
     private String localProjectMaterialsLocation = null;
 
@@ -17,19 +19,19 @@ public class TypedMaterialsExtension{
 
     public TypedMaterialsExtension(Project project) {
         ObjectFactory objectFactory = project.getObjects();
-        this.configurations = objectFactory.domainObjectContainer(MaterialConfiguration.class);
+        this.librariesToScan = objectFactory.domainObjectContainer(MaterialConfiguration.class);
 
-        MaterialConfiguration core = configurations.create("core");
+        MaterialConfiguration core = librariesToScan.create("core");
         core.setJarFilterRegex(".*jme3-core.*");
         core.setOutputPackage("org.jme3.core.materials");
 
-        MaterialConfiguration effects = configurations.create("effects");
+        MaterialConfiguration effects = librariesToScan.create("effects");
         effects.setJarFilterRegex(".*jme3-effects.*");
         effects.setOutputPackage("org.jme3.effects.materials");
     }
 
-    public NamedDomainObjectContainer<MaterialConfiguration> getConfigurations() {
-        return configurations;
+    public NamedDomainObjectContainer<MaterialConfiguration> getLibrariesToScan() {
+        return librariesToScan;
     }
 
     public String getLocalProjectMaterialsLocation(){
@@ -54,5 +56,13 @@ public class TypedMaterialsExtension{
 
     public void setGeneratedSourcesDir(String generatedSourcesDir){
         this.generatedSourcesDir = generatedSourcesDir;
+    }
+
+    public boolean isEnableLibraryMaterialsSearch() {
+        return enableLibraryMaterialsSearch;
+    }
+
+    public void setEnableLibraryMaterialsSearch(boolean enableLibraryMaterialsSearch){
+        this.enableLibraryMaterialsSearch = enableLibraryMaterialsSearch;
     }
 }

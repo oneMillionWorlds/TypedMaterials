@@ -4,6 +4,7 @@
 package com.onemillionworlds;
 
 import com.onemillionworlds.tasks.TypedJarMaterials;
+import com.onemillionworlds.tasks.TypedLocalMaterials;
 import org.gradle.api.Project;
 import org.gradle.api.Plugin;
 import org.gradle.api.tasks.SourceSet;
@@ -11,6 +12,7 @@ import org.gradle.api.tasks.SourceSetContainer;
 import  com.onemillionworlds.configuration.TypedMaterialsExtension;
 
 import java.io.File;
+import java.util.Optional;
 
 public class TypedMaterialsPlugin implements Plugin<Project> {
     public static final String DEFAULT_GENERATED_SOURCES_DIR = "src/main/generated/java";
@@ -19,23 +21,35 @@ public class TypedMaterialsPlugin implements Plugin<Project> {
 
         TypedMaterialsExtension extension = project.getExtensions().create("typedMaterials", TypedMaterialsExtension.class, project);
 
-        String sourcesRoot = extension.getGeneratedSourcesDir();
-
-        extension.getConfigurations().all(configuration -> {
-            String taskName = configuration.getName() + "TypedMaterials";
-
-            project.getTasks().register(taskName, TypedJarMaterials.class, task -> {
-                task.setOutputPackage(configuration.getOutputPackage());
-                task.setOutputSourcesRoot(project.file(sourcesRoot));
-                task.setJarFilterRegex(configuration.getJarFilterRegex());
-            });
-            project.getTasks().named("compileJava").configure(compileJava -> {
-                compileJava.dependsOn(taskName);
-            });
-        });
-
-        // Add 'src/main/generated/java' to sourceSets.main.java.srcDirs
         project.afterEvaluate(p -> {
+            String sourcesRoot = extension.getGeneratedSourcesDir();
+
+            if(extension.isEnableLibraryMaterialsSearch()){
+                extension.getLibrariesToScan().all(configuration -> {
+                    String taskName = configuration.getName() + "TypedMaterials";
+
+                    project.getTasks().register(taskName, TypedJarMaterials.class, task -> {
+                        task.setOutputPackage(configuration.getOutputPackage());
+                        task.setOutputSourcesRoot(project.file(sourcesRoot));
+                        task.setJarFilterRegex(configuration.getJarFilterRegex());
+                    });
+                    project.getTasks().named("compileJava").configure(compileJava -> {
+                        compileJava.dependsOn(taskName);
+                    });
+                });
+            }
+
+            Optional.ofNullable(extension.getLocalProjectMaterialsLocation()).ifPresent(localProjectMaterialsLocation -> {
+                project.getTasks().register("localTypedMaterials", TypedLocalMaterials.class, task -> {
+                    task.setInputDirectory(project.file(localProjectMaterialsLocation));
+                    task.setOutputPackage(extension.getLocalProjectMaterialPackage());
+                    task.setOutputSourcesRoot(project.file(sourcesRoot));
+                });
+                project.getTasks().named("compileJava").configure(compileJava -> {
+                    compileJava.dependsOn("localTypedMaterials");
+                });
+            });
+
             SourceSetContainer sourceSets = project.getExtensions().getByType(SourceSetContainer.class);
             SourceSet mainSourceSet = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
             File generatedSourcesDir = project.file(sourcesRoot);
