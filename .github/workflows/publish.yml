@@ -55,7 +55,7 @@ jobs:
         # Commit the change
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add build.gradle
+        git add plugin/build.gradle.kts
         git commit -m "Increment version to $NEW_VERSION [skip ci]"
         
         # Push the commit
