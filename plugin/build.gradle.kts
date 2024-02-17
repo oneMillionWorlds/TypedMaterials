@@ -28,7 +28,7 @@ dependencies {
 
 gradlePlugin {
     val typedMaterialsPlugin by plugins.creating {
-        id = "com.onemillionworlds.typedmaterials"
+        id = "com.onemillionworlds.typed-materials"
         implementationClass = "com.onemillionworlds.TypedMaterialsPlugin"
     }
 }
