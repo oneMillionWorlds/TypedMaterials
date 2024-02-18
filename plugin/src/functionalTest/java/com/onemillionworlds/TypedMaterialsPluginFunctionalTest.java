@@ -225,7 +225,7 @@ class TypedMaterialsPluginFunctionalTest {
                          implementation 'org.jmonkeyengine:jme3-core:3.6.1-stable'
                     }
                     typedMaterials{
-                      localMaterialsSearch('com.myproject.materials', "assets", "assets")
+                      localMaterialsSearch('com.myproject.materials', "Assets", "Assets")
                     }
                     """);
         writeString(new File(localMaterialsRoot_assetsStyle(), "PowerMeter.j3md"), localMaterial);
