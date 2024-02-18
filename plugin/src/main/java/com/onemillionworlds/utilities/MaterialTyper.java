@@ -199,7 +199,7 @@ public class MaterialTyper{
             Matcher paramMatcher = paramLine.matcher(line);
             if (commentMatcher.find()){
                 if(anyComment){
-                    content.append(" <br>\n");
+                    commentUnderConstruction.append(" <br>\n");
                 }
 
                 commentUnderConstruction.append(" * " +commentMatcher.group(1));
@@ -239,11 +239,11 @@ public class MaterialTyper{
                         .replace("[PARAMETER_NAME_LOWER_CAMEL_CASE]", toLowerCamlCase(nameUpperCamelCase));
 
                 if(!comment.isBlank()){
-                    content.append("\n/**\n" + comment + " */\n");
+                    content.append("/**\n" + comment + "\n */\n");
                 }
                 content.append(setMethod).append("\n\n");
                 if(!comment.isBlank()){
-                    content.append("\n/**\n" + comment + " */\n");
+                    content.append("\n/**\n" + comment + "\n */\n");
                 }
                 content.append(getMethod).append("\n\n");
                 anyComment = false;
