@@ -187,16 +187,24 @@ public class MaterialTyper{
 
         StringBuilder content = new StringBuilder();
         StringBuilder commentUnderConstruction = new StringBuilder();
+        boolean anyComment = false;
 
         BufferedReader bufReader = new BufferedReader(new StringReader(materialParams));
 
         String line=null;
         while( (line=bufReader.readLine()) != null )
         {
+
             Matcher commentMatcher = commentLine.matcher(line);
             Matcher paramMatcher = paramLine.matcher(line);
             if (commentMatcher.find()){
-                commentUnderConstruction.append(" * " +commentMatcher.group(1)).append("\n");
+                if(anyComment){
+                    content.append(" <br>\n");
+                }
+
+                commentUnderConstruction.append(" * " +commentMatcher.group(1));
+
+                anyComment = true;
             }else if(paramMatcher.find()){
                 String type = paramMatcher.group(1);
                 String nameUpperCamelCase = paramMatcher.group(2);
@@ -231,14 +239,14 @@ public class MaterialTyper{
                         .replace("[PARAMETER_NAME_LOWER_CAMEL_CASE]", toLowerCamlCase(nameUpperCamelCase));
 
                 if(!comment.isBlank()){
-                    content.append("/**\n" + comment + " */\n");
+                    content.append("\n/**\n" + comment + " */\n");
                 }
                 content.append(setMethod).append("\n\n");
                 if(!comment.isBlank()){
-                    content.append("/**\n" + comment + " */\n");
+                    content.append("\n/**\n" + comment + " */\n");
                 }
                 content.append(getMethod).append("\n\n");
-
+                anyComment = false;
                 commentUnderConstruction = new StringBuilder();
             }
 
