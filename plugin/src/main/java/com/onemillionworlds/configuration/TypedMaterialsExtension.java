@@ -56,7 +56,7 @@ public class TypedMaterialsExtension{
      * @param outputPackage the package where the generated materials will be placed. E.g. "com.mygame.materials"
      */
     public void localMaterialsSearch(String outputPackage){
-        localMaterialsSearch("src/main/resources/MatDefs", outputPackage, "resources");
+        localMaterialsSearch(outputPackage, "src/main/resources/MatDefs", "resources");
     }
 
     /**
