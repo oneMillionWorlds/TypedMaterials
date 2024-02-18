@@ -35,16 +35,20 @@ public class TypedLocalMaterials extends DefaultTask{
             if (file.getPath().endsWith(".j3md")){
                 File outputDirectory = getOutputDirectory();
 
-
                 String prePathRegex = ".*/" + resourcesDir + "/";
 
                 String fullDefName = file.getPath().replace('\\', '/').replaceAll(prePathRegex, "");
                 String className = file.toPath().getFileName().toString().replace(".j3md", "") + "Material";
                 String originComment = fullDefName + " in local resources";
 
-                String fileContents = MaterialTyper.createMaterialClassFile(fullDefName, className, outputPackage, Files.readString(file.toPath()), originComment);
-                File destination = new File(outputDirectory, className + ".java");
-                Files.writeString(destination.toPath(), fileContents);
+                String fileContentsMaterial = MaterialTyper.createMaterialClassFile(fullDefName, className, outputPackage, Files.readString(file.toPath()), originComment, false);
+                String fileContentsWrapper = MaterialTyper.createMaterialClassFile(fullDefName, className, outputPackage, Files.readString(file.toPath()), originComment, true);
+
+                File destinationMaterial = new File(outputDirectory, className + ".java");
+                Files.writeString(destinationMaterial.toPath(), fileContentsMaterial);
+
+                File destinationWrapper = new File(new File(outputDirectory, "wrapper"),className + "Wrapper.java");
+                Files.writeString(destinationWrapper.toPath(), fileContentsWrapper);
             }
         }
     }

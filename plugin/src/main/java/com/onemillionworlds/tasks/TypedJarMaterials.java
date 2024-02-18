@@ -54,10 +54,14 @@ public class TypedJarMaterials extends DefaultTask{
                             String className = toUpperCamlCase(fullDefName.replace(".j3md", "").replaceAll("^.*/", "")) + "Material";
                             String originComment = fullDefName + " in library " + file.getName().replace(".jar", "");
 
-                            String fileContents = MaterialTyper.createMaterialClassFile(fullDefName, className, outputPackage, content.toString(), originComment);
+                            String fileContentsMaterial = MaterialTyper.createMaterialClassFile(fullDefName, className, outputPackage, content.toString(), originComment, false);
+                            String fileContentsWrapper = MaterialTyper.createMaterialClassFile(fullDefName, className, outputPackage, content.toString(), originComment, true);
 
                             File destination = new File(outputDirectory, className + ".java");
-                            Files.writeString(destination.toPath(), fileContents);
+                            Files.writeString(destination.toPath(), fileContentsMaterial);
+
+                            File destinationWrapper = new File(new File(outputDirectory, "wrapper"),className + "Wrapper.java");
+                            Files.writeString(destinationWrapper.toPath(), fileContentsWrapper);
                         }
                         zip.closeEntry();
                     }
