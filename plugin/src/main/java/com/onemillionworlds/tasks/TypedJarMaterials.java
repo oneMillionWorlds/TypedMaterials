@@ -5,6 +5,7 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.OutputDirectory;
+import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
 
 import java.io.BufferedReader;
@@ -12,6 +13,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -33,6 +36,7 @@ public class TypedJarMaterials extends DefaultTask{
         Configuration test = getProject().getConfigurations().getByName("runtimeClasspath");
         Set<File> resolve = test.resolve();
 
+        List<String> fullyQualifiedMaterialClasses = new ArrayList<>();
 
         resolve.forEach(file -> {
             if (file.getName().endsWith(".jar") && pattern.matcher(file.getName()).matches()) {
@@ -62,6 +66,8 @@ public class TypedJarMaterials extends DefaultTask{
 
                             File destinationWrapper = new File(new File(outputDirectory, "wrapper"),className + "Wrapper.java");
                             Files.writeString(destinationWrapper.toPath(), fileContentsWrapper);
+
+                            fullyQualifiedMaterialClasses.add(outputPackage + "." + className);
                         }
                         zip.closeEntry();
                     }
@@ -70,6 +76,12 @@ public class TypedJarMaterials extends DefaultTask{
                 }
             }
         });
+
+        try {
+            Files.writeString(getBuiltFilesRecordFile().toPath(), String.join("\n", fullyQualifiedMaterialClasses));
+        } catch (Exception e) {
+            throw new RuntimeException("Error writing record of generation: " + getName() + ". " + e.getMessage(), e);
+        }
     }
 
     @Input
@@ -86,6 +98,11 @@ public class TypedJarMaterials extends DefaultTask{
     @OutputDirectory
     public File getOutputDirectoryWrapper(){
         return new File(getOutputDirectory(), "wrapper");
+    }
+
+    @OutputFile
+    public File getBuiltFilesRecordFile(){
+        return new File(getProject().getLayout().getBuildDirectory().dir("typedMaterials").get().getAsFile(), getName());
     }
 
     @Input

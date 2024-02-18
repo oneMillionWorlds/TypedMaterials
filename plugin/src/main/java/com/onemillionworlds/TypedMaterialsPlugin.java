@@ -3,8 +3,7 @@
  */
 package com.onemillionworlds;
 
-import com.onemillionworlds.tasks.TypedJarMaterials;
-import com.onemillionworlds.tasks.TypedLocalMaterials;
+import com.onemillionworlds.tasks.MaterialFactoryTask;
 import org.gradle.api.Project;
 import org.gradle.api.Plugin;
 import org.gradle.api.tasks.SourceSet;
@@ -12,7 +11,6 @@ import org.gradle.api.tasks.SourceSetContainer;
 import  com.onemillionworlds.configuration.TypedMaterialsExtension;
 
 import java.io.File;
-import java.util.Optional;
 
 public class TypedMaterialsPlugin implements Plugin<Project> {
     public static final String DEFAULT_GENERATED_SOURCES_DIR = "src/main/generated/java";
@@ -20,6 +18,13 @@ public class TypedMaterialsPlugin implements Plugin<Project> {
     public void apply(Project project) {
 
         TypedMaterialsExtension extension = project.getExtensions().create("typedMaterials", TypedMaterialsExtension.class, project);
+
+        project.getTasks().create("materialFactory", MaterialFactoryTask.class, task -> {
+            task.setOutputSourcesRoot(project.file(extension.getGeneratedSourcesDir()));
+            task.setFullyQualifiedOutputClass(extension.getMaterialFactoryClass().get());
+        });
+
+        project.getTasks().named("compileJava").configure(compileJava -> compileJava.dependsOn("materialFactory"));
 
         project.afterEvaluate(p -> {
             SourceSetContainer sourceSets = project.getExtensions().getByType(SourceSetContainer.class);

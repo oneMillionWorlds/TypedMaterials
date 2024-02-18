@@ -18,12 +18,17 @@ public class TypedMaterialsExtension{
      */
     private final Property<String> generatedSourcesDir;
 
+    private final Property<String> materialFactoryClass;
+
     public TypedMaterialsExtension(Project project) {
         this.project = project;
         ObjectFactory objectFactory = project.getObjects();
 
         generatedSourcesDir = objectFactory.property(String.class);
         generatedSourcesDir.set(TypedMaterialsPlugin.DEFAULT_GENERATED_SOURCES_DIR);
+
+        materialFactoryClass = objectFactory.property(String.class);
+        materialFactoryClass.set("com.onemillionworlds.typedmaterials.materials.MaterialFactory");
     }
 
     public void jmeMaterials(){
@@ -44,9 +49,7 @@ public class TypedMaterialsExtension{
             task.setOutputSourcesRoot(project.file(generatedSourcesDir));
             task.setJarFilterRegex(jarFilterRegex);
         });
-        project.getTasks().named("compileJava").configure(compileJava -> {
-            compileJava.dependsOn(taskName);
-        });
+        project.getTasks().named("materialFactory").configure(compileJava -> compileJava.dependsOn(taskName));
     }
 
     /**
@@ -73,9 +76,7 @@ public class TypedMaterialsExtension{
             task.setOutputSourcesRoot(project.file(generatedSourcesDir));
             task.setResourcesDir(resourcesDirName);
         });
-        project.getTasks().named("compileJava").configure(compileJava -> {
-            compileJava.dependsOn("localTypedMaterials");
-        });
+        project.getTasks().named("materialFactory").configure(compileJava -> compileJava.dependsOn("localTypedMaterials"));
     }
 
     /**
@@ -84,5 +85,9 @@ public class TypedMaterialsExtension{
      */
     public Property<String> getGeneratedSourcesDir(){
         return generatedSourcesDir;
+    }
+
+    public Property<String> getMaterialFactoryClass(){
+        return materialFactoryClass;
     }
 }
