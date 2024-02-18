@@ -22,41 +22,15 @@ public class TypedMaterialsPlugin implements Plugin<Project> {
         TypedMaterialsExtension extension = project.getExtensions().create("typedMaterials", TypedMaterialsExtension.class, project);
 
         project.afterEvaluate(p -> {
-            String sourcesRoot = extension.getGeneratedSourcesDir();
-
-            if(extension.isEnableLibraryMaterialsSearch()){
-                extension.getLibrariesToScan().all(configuration -> {
-                    String taskName = configuration.getName() + "TypedMaterials";
-
-                    project.getTasks().register(taskName, TypedJarMaterials.class, task -> {
-                        task.setOutputPackage(configuration.getOutputPackage());
-                        task.setOutputSourcesRoot(project.file(sourcesRoot));
-                        task.setJarFilterRegex(configuration.getJarFilterRegex());
-                    });
-                    project.getTasks().named("compileJava").configure(compileJava -> {
-                        compileJava.dependsOn(taskName);
-                    });
-                });
-            }
-
-            Optional.ofNullable(extension.getLocalProjectMaterialsLocation()).ifPresent(localProjectMaterialsLocation -> {
-                project.getTasks().register("localTypedMaterials", TypedLocalMaterials.class, task -> {
-                    task.setInputDirectory(project.file(localProjectMaterialsLocation));
-                    task.setOutputPackage(extension.getLocalProjectMaterialPackage());
-                    task.setOutputSourcesRoot(project.file(sourcesRoot));
-                });
-                project.getTasks().named("compileJava").configure(compileJava -> {
-                    compileJava.dependsOn("localTypedMaterials");
-                });
-            });
-
             SourceSetContainer sourceSets = project.getExtensions().getByType(SourceSetContainer.class);
             SourceSet mainSourceSet = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
-            File generatedSourcesDir = project.file(sourcesRoot);
+            File generatedSourcesDir = project.file(extension.getGeneratedSourcesDir());
 
             if (!mainSourceSet.getJava().getSrcDirs().contains(generatedSourcesDir)) {
                 mainSourceSet.getJava().srcDir(generatedSourcesDir);
             }
         });
     }
+
+
 }

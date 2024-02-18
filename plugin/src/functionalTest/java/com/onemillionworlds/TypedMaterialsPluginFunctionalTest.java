@@ -51,12 +51,19 @@ class TypedMaterialsPluginFunctionalTest {
         return new File(projectDir,  "src/main/generated/java");
     }
 
+
     private File getGeneratedJavaFile(String pathRelativeToRoot) {
         return new File(getGeneratedJavaFilesRoot(),  pathRelativeToRoot);
     }
 
-    private File localMaterialsRoot() {
-        File directory = new File(projectDir,  "src/main/resources/Materials");
+    private File localMaterialsRoot_resourcesStyle() {
+        File directory = new File(projectDir,  "src/main/resources/MatDefs");
+        directory.mkdirs();
+        return directory;
+    }
+
+    private File localMaterialsRoot_assetsStyle() {
+        File directory = new File(projectDir,  "Assets/MatDefs");
         directory.mkdirs();
         return directory;
     }
@@ -70,6 +77,9 @@ class TypedMaterialsPluginFunctionalTest {
                       id('java')
                       id('com.onemillionworlds.typed-materials')
                     };
+                    typedMaterials{
+                      jmeMaterials()
+                    }
                     """);
 
         GradleRunner runner = GradleRunner.create();
@@ -82,10 +92,10 @@ class TypedMaterialsPluginFunctionalTest {
         // Verify the result
         result.getTasks().forEach(task -> System.out.println("Task: " + task));
 
-        BuildTask coreTask = result.task(":coreTypedMaterials");
+        BuildTask coreTask = result.task(":jmeCoreMaterials");
         assertNotNull(coreTask);
         assertEquals(coreTask.getOutcome(), TaskOutcome.SUCCESS);
-        BuildTask effectsTask = result.task(":effectsTypedMaterials");
+        BuildTask effectsTask = result.task(":jmeEffectsMaterials");
         assertNotNull(effectsTask);
         assertEquals(effectsTask.getOutcome(), TaskOutcome.SUCCESS);
     }
@@ -100,12 +110,7 @@ class TypedMaterialsPluginFunctionalTest {
                       id('com.onemillionworlds.typed-materials')
                     };
                     typedMaterials{
-                      librariesToScan {
-                        alternate {
-                          outputPackage = 'com.onemillionworlds.core.materials'
-                          jarFilterRegex = '.*core.*'
-                        }
-                      }
+                        librarySearch("alternateTypedMaterials", ".*core.*", "com.onemillionworlds.core.materials")
                     }
                     
                     """);
@@ -137,6 +142,9 @@ class TypedMaterialsPluginFunctionalTest {
                     }
                     dependencies {
                          implementation 'org.jmonkeyengine:jme3-core:3.6.1-stable'
+                    }
+                    typedMaterials{
+                      jmeMaterials()
                     }
                     """);
 
@@ -187,11 +195,10 @@ class TypedMaterialsPluginFunctionalTest {
                          implementation 'org.jmonkeyengine:jme3-core:3.6.1-stable'
                     }
                     typedMaterials{
-                        localProjectMaterialsLocation = 'src/main/resources/Materials'
-                        localProjectMaterialPackage = 'com.myproject.materials'
+                      localMaterialsSearch('com.myproject.materials')
                     }
                     """);
-        writeString(new File(localMaterialsRoot(), "PowerMeter.j3md"), localMaterial);
+        writeString(new File(localMaterialsRoot_resourcesStyle(), "PowerMeter.j3md"), localMaterial);
 
         // Run the build
         GradleRunner runner = GradleRunner.create();
@@ -213,7 +220,63 @@ class TypedMaterialsPluginFunctionalTest {
 
         assertTrue(content.contains("""
                     public PowerMeterMaterial(AssetManager contentMan) {
-                        super(contentMan, "Materials/PowerMeter.j3md");
+                        super(contentMan, "MatDefs/PowerMeter.j3md");
+                    }
+                """));
+
+        assertTrue(content.contains("""
+                    /**
+                     *  Current usage fraction, from 0 to 1
+                     */
+                    public void setFillFraction(float fillFraction){
+                        setFloat("FillFraction", fillFraction);
+                    }
+                """));
+
+    }
+
+    @Test
+    void outputsProcessedFilesFromLocalMaterials_assetsStyle() throws IOException {
+        writeString(getSettingsFile(), "");
+        writeString(getBuildFile(),
+                """
+                    plugins {
+                      id('java')
+                      id('com.onemillionworlds.typed-materials')
+                    };
+                    repositories {
+                        mavenCentral()
+                    }
+                    dependencies {
+                         implementation 'org.jmonkeyengine:jme3-core:3.6.1-stable'
+                    }
+                    typedMaterials{
+                      localMaterialsSearch('com.myproject.materials', "assets", "assets")
+                    }
+                    """);
+        writeString(new File(localMaterialsRoot_assetsStyle(), "PowerMeter.j3md"), localMaterial);
+
+        // Run the build
+        GradleRunner runner = GradleRunner.create();
+        runner.forwardOutput();
+        runner.withPluginClasspath();
+        runner.withArguments("assemble");
+        runner.withProjectDir(projectDir);
+        BuildResult result = runner.build();
+
+        BuildTask localMaterialsTask = result.task(":localTypedMaterials");
+        assertNotNull(localMaterialsTask);
+        assertEquals(localMaterialsTask.getOutcome(), TaskOutcome.SUCCESS);
+
+        File powerMeterMaterial = getGeneratedJavaFile("com/myproject/materials/PowerMeterMaterial.java");
+        assertTrue(powerMeterMaterial.exists());
+        String content = Files.readString(powerMeterMaterial.toPath());
+
+        assertTrue(content.contains("package com.myproject.materials;"));
+
+        assertTrue(content.contains("""
+                    public PowerMeterMaterial(AssetManager contentMan) {
+                        super(contentMan, "MatDefs/PowerMeter.j3md");
                     }
                 """));
 

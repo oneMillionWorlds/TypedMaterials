@@ -19,6 +19,8 @@ public class TypedLocalMaterials extends DefaultTask{
 
     File outputSourcesRoot;
 
+    String resourcesDir = "resources";
+
     @TaskAction
     public void createTypedMaterials() throws IOException{
         searchAndCreateClasses(inputDirectory);
@@ -32,7 +34,11 @@ public class TypedLocalMaterials extends DefaultTask{
         }else{
             if (file.getPath().endsWith(".j3md")){
                 File outputDirectory = getOutputDirectory();
-                String fullDefName = file.getPath().replace('\\', '/').replaceAll(".*/resources/", "");
+
+
+                String prePathRegex = ".*/" + resourcesDir + "/";
+
+                String fullDefName = file.getPath().replace('\\', '/').replaceAll(prePathRegex, "");
                 String className = file.toPath().getFileName().toString().replace(".j3md", "") + "Material";
                 String fileContents = MaterialTyper.createMaterialClassFile(fullDefName, className, outputPackage, Files.readString(file.toPath()));
                 File destination = new File(outputDirectory, className + ".java");
@@ -55,6 +61,15 @@ public class TypedLocalMaterials extends DefaultTask{
     public File getOutputDirectory(){
         String packageFolder = outputPackage.replace(".", "/");
         return new File(outputSourcesRoot, packageFolder);
+    }
+
+    @Input
+    public String getResourcesDir(){
+        return resourcesDir;
+    }
+
+    public void setResourcesDir(String resourcesDir){
+        this.resourcesDir = resourcesDir;
     }
 
     public void setOutputSourcesRoot(File outputSourcesRoot){
