@@ -69,6 +69,11 @@ public class TypedLocalMaterials extends DefaultTask{
         return new File(outputSourcesRoot, packageFolder);
     }
 
+    @OutputDirectory
+    public File getOutputDirectoryWrapper(){
+        return new File(getOutputDirectory(), "wrapper");
+    }
+
     @Input
     public String getResourcesDir(){
         return resourcesDir;
