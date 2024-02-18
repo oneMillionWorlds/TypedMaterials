@@ -40,7 +40,9 @@ public class TypedLocalMaterials extends DefaultTask{
 
                 String fullDefName = file.getPath().replace('\\', '/').replaceAll(prePathRegex, "");
                 String className = file.toPath().getFileName().toString().replace(".j3md", "") + "Material";
-                String fileContents = MaterialTyper.createMaterialClassFile(fullDefName, className, outputPackage, Files.readString(file.toPath()));
+                String originComment = fullDefName + " in local resources";
+
+                String fileContents = MaterialTyper.createMaterialClassFile(fullDefName, className, outputPackage, Files.readString(file.toPath()), originComment);
                 File destination = new File(outputDirectory, className + ".java");
                 Files.writeString(destination.toPath(), fileContents);
             }

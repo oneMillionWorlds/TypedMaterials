@@ -52,7 +52,10 @@ public class TypedJarMaterials extends DefaultTask{
                             File outputDirectory = getOutputDirectory();
                             String fullDefName = entry.getName().replace('\\', '/').replaceAll(".*/resources/", "");
                             String className = toUpperCamlCase(fullDefName.replace(".j3md", "").replaceAll("^.*/", "")) + "Material";
-                            String fileContents = MaterialTyper.createMaterialClassFile(fullDefName, className, outputPackage, content.toString());
+                            String originComment = fullDefName + " in library " + file.getName().replace(".jar", "");
+
+                            String fileContents = MaterialTyper.createMaterialClassFile(fullDefName, className, outputPackage, content.toString(), originComment);
+
                             File destination = new File(outputDirectory, className + ".java");
                             Files.writeString(destination.toPath(), fileContents);
                         }
