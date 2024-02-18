@@ -36,12 +36,14 @@ public class FactoryBuilder{
                                              
                                          }
                                      
-                                         public Material createMaterial(Class<? extends Material> materialClass, AssetManager assetManager){
-                                             return materialMap.get(materialClass).apply(assetManager);
+                                         @SuppressWarnings("unchecked")
+                                         public <T extends Material> T createMaterial(Class<T> materialClass, AssetManager assetManager){
+                                             return (T)materialMap.get(materialClass).apply(assetManager);
                                          }
-                                         
-                                         public Function<AssetManager,Material> getMaterialConstructor(Class<? extends Material> materialClass){
-                                             return materialMap.get(materialClass);
+                                    
+                                         @SuppressWarnings("unchecked")
+                                         public <T extends Material> Function<AssetManager,T> getMaterialConstructor(Class<T> materialClass){
+                                             return (Function<AssetManager,T>)materialMap.get(materialClass);
                                          }
                                      
                                      }""";
