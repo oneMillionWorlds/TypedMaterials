@@ -5,11 +5,14 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.OutputDirectory;
+import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TypedLocalMaterials extends DefaultTask{
 
@@ -23,13 +26,21 @@ public class TypedLocalMaterials extends DefaultTask{
 
     @TaskAction
     public void createTypedMaterials() throws IOException{
-        searchAndCreateClasses(inputDirectory);
+        List<String> fullyQualifiedMaterialClasses = new ArrayList<>();
+
+        searchAndCreateClasses(inputDirectory, fullyQualifiedMaterialClasses);
+
+        try {
+            Files.writeString(getBuiltFilesRecordFile().toPath(), String.join("\n", fullyQualifiedMaterialClasses));
+        } catch (Exception e) {
+            throw new RuntimeException("Error writing record of generation: " + getName() + ". " + e.getMessage(), e);
+        }
     }
 
-    private void searchAndCreateClasses(File file) throws IOException{
+    private void searchAndCreateClasses(File file, List<String> fullyQualifiedMaterialClasses_out) throws IOException{
         if (file.isDirectory()){
             for( File fileToProcess : file.listFiles()){
-                searchAndCreateClasses(fileToProcess);
+                searchAndCreateClasses(fileToProcess, fullyQualifiedMaterialClasses_out);
             }
         }else{
             if (file.getPath().endsWith(".j3md")){
@@ -49,6 +60,8 @@ public class TypedLocalMaterials extends DefaultTask{
 
                 File destinationWrapper = new File(new File(outputDirectory, "wrapper"),className + "Wrapper.java");
                 Files.writeString(destinationWrapper.toPath(), fileContentsWrapper);
+
+                fullyQualifiedMaterialClasses_out.add(outputPackage + "." + className);
             }
         }
     }
@@ -67,6 +80,11 @@ public class TypedLocalMaterials extends DefaultTask{
     public File getOutputDirectory(){
         String packageFolder = outputPackage.replace(".", "/");
         return new File(outputSourcesRoot, packageFolder);
+    }
+
+    @OutputFile
+    public File getBuiltFilesRecordFile(){
+        return new File(getProject().getLayout().getBuildDirectory().dir("typedMaterials").get().getAsFile(), getName());
     }
 
     @OutputDirectory

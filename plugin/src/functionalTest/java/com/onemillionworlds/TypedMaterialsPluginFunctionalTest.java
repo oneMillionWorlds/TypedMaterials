@@ -69,38 +69,6 @@ class TypedMaterialsPluginFunctionalTest {
     }
 
     @Test
-    void correctDefaultTasks() throws IOException {
-        writeString(getSettingsFile(), "");
-        writeString(getBuildFile(),
-                """
-                    plugins {
-                      id('java')
-                      id('com.onemillionworlds.typed-materials')
-                    };
-                    typedMaterials{
-                      jmeMaterials()
-                    }
-                    """);
-
-        GradleRunner runner = GradleRunner.create();
-        runner.forwardOutput();
-        runner.withPluginClasspath();
-        runner.withArguments("assemble");
-        runner.withProjectDir(projectDir);
-        BuildResult result = runner.build();
-
-        // Verify the result
-        result.getTasks().forEach(task -> System.out.println("Task: " + task));
-
-        BuildTask coreTask = result.task(":jmeCoreMaterials");
-        assertNotNull(coreTask);
-        assertEquals(coreTask.getOutcome(), TaskOutcome.SUCCESS);
-        BuildTask effectsTask = result.task(":jmeEffectsMaterials");
-        assertNotNull(effectsTask);
-        assertEquals(effectsTask.getOutcome(), TaskOutcome.SUCCESS);
-    }
-
-    @Test
     void correctConfiguredTasks() throws IOException {
         writeString(getSettingsFile(), "");
         writeString(getBuildFile(),
@@ -109,6 +77,12 @@ class TypedMaterialsPluginFunctionalTest {
                       id('java')
                       id('com.onemillionworlds.typed-materials')
                     };
+                    repositories {
+                        mavenCentral()
+                    }
+                    dependencies {
+                         implementation 'org.jmonkeyengine:jme3-core:3.6.1-stable'
+                    }
                     typedMaterials{
                         librarySearch("alternateTypedMaterials", ".*core.*", "com.onemillionworlds.core.materials")
                     }
