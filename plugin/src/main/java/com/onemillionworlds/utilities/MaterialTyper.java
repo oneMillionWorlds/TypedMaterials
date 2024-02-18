@@ -81,15 +81,22 @@ public class MaterialTyper{
                                       */
                                      public class [MATERIAL_NAME]Wrapper{
                                      
-                                         Material material;
+                                         private final Material material;
                                      
                                          public [MATERIAL_NAME]Wrapper(Material material) {
+                                             if(material == null){
+                                                 throw new IllegalArgumentException("Material cannot be null");
+                                             }
+                                             if(!material.getMaterialDef().getName().equals("[DEF_NAME]")){
+                                                 throw new IllegalArgumentException("Material is not of type [DEF_NAME]");
+                                             }
                                              this.material = material;
                                          }
+                                         
                                          /**
                                           * @return the underlying Material object
                                           */
-                                         getMaterial(){
+                                         public Material getMaterial(){
                                              return material;
                                          }
                                      
@@ -119,29 +126,29 @@ public class MaterialTyper{
         templates.put("Int", new MaterialParameterMetadata(
                 "int",
                 "setInt(\"[PARAMETER_NAME]\", [PARAMETER_NAME_LOWER_CAMEL_CASE])",
-                "return (int)getParamValue(\"[PARAMETER_NAME]\")"
+                "return getParamValue(\"[PARAMETER_NAME]\")"
                 ));
         templates.put("Float", new MaterialParameterMetadata(
                 "float",
                 "setFloat(\"[PARAMETER_NAME]\", [PARAMETER_NAME_LOWER_CAMEL_CASE])",
-                "return (float)getParamValue(\"[PARAMETER_NAME]\")"
+                "return getParamValue(\"[PARAMETER_NAME]\")"
         ));
         templates.put("Texture2D", new MaterialParameterMetadata(
                 "Texture",
                 "setTexture(\"[PARAMETER_NAME]\", [PARAMETER_NAME_LOWER_CAMEL_CASE])",
-                "return (Texture)getParamValue(\"[PARAMETER_NAME]\")"
+                "return getParamValue(\"[PARAMETER_NAME]\")"
         ));
         templates.put("Color", new MaterialParameterMetadata(
                 "ColorRGBA",
                 "setColor(\"[PARAMETER_NAME]\", [PARAMETER_NAME_LOWER_CAMEL_CASE])",
-                "return (ColorRGBA)getParamValue(\"[PARAMETER_NAME]\")"
+                "return getParamValue(\"[PARAMETER_NAME]\")"
         ));
 
         BiConsumer<String, String> simpleAddTemplate = (materialType, javaType) -> {
             templates.put(materialType, new MaterialParameterMetadata(
                     javaType,
                     "setParam(\"[PARAMETER_NAME]\", VarType."+materialType+",  [PARAMETER_NAME_LOWER_CAMEL_CASE])",
-                    "return ("+javaType+")getParamValue(\"[PARAMETER_NAME]\")"
+                    "return getParamValue(\"[PARAMETER_NAME]\")"
             ));
         };
 
@@ -203,14 +210,22 @@ public class MaterialTyper{
                     throw new RuntimeException("Unknown material parameter type: " + type);
                 }
 
+                String setTemplate = materialParameterMetadata.setTemplate;
+                String getTemplate = materialParameterMetadata.getTemplate;
+
+                if(wrapper){
+                    setTemplate = "material." + setTemplate;
+                    getTemplate = getTemplate.replace("return ", "return material.");
+                }
+
                 String setMethod = setMethodTemplate
                         .replace("[TYPE]", materialParameterMetadata.javaType)
-                        .replace("[CONTENT]", (wrapper ? "getMaterial()." : "") + materialParameterMetadata.setTemplate)
+                        .replace("[CONTENT]", setTemplate)
                         .replace("[PARAMETER_NAME]", nameUpperCamelCase)
                         .replace("[PARAMETER_NAME_LOWER_CAMEL_CASE]", toLowerCamlCase(nameUpperCamelCase));
 
                 String getMethod = getMethodTemplate
-                        .replace("[CONTENT]", (wrapper ? "getMaterial()." : "") + materialParameterMetadata.getTemplate)
+                        .replace("[CONTENT]", getTemplate)
                         .replace("[TYPE]", materialParameterMetadata.javaType)
                         .replace("[PARAMETER_NAME]", nameUpperCamelCase)
                         .replace("[PARAMETER_NAME_LOWER_CAMEL_CASE]", toLowerCamlCase(nameUpperCamelCase));
