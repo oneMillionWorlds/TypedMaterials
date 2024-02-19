@@ -87,8 +87,8 @@ public class MaterialTyper{
                                              if(material == null){
                                                  throw new IllegalArgumentException("Material cannot be null");
                                              }
-                                             if(!material.getMaterialDef().getName().equals("[DEF_NAME]")){
-                                                 throw new IllegalArgumentException("Material is not of type [DEF_NAME] + but is " + material.getMaterialDef().getName());
+                                             if(!material.getMaterialDef().getAssetName().equals("[DEF_NAME]")){
+                                                 throw new IllegalArgumentException("Material is not of type [DEF_NAME] + but is " + material.getMaterialDef().getAssetName());
                                              }
                                              this.material = material;
                                          }
