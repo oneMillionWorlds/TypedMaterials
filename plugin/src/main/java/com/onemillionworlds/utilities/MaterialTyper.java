@@ -39,6 +39,7 @@ public class MaterialTyper{
                                       * Generated from [GENERATED_FROM]
                                       * </p>
                                       */
+                                     @SuppressWarnings("all")
                                      public class [MATERIAL_NAME] extends Material {
                                      
                                          public [MATERIAL_NAME](AssetManager contentMan) {
@@ -79,6 +80,7 @@ public class MaterialTyper{
                                       * use the getMaterial() method to get the underlying Material object.
                                       * </p>
                                       */
+                                     @SuppressWarnings("all")
                                      public class [MATERIAL_NAME]Wrapper{
                                      
                                          private final Material material;
