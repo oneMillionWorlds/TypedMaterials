@@ -77,6 +77,10 @@ public class TypedJarMaterials extends DefaultTask{
             }
         });
 
+        if (fullyQualifiedMaterialClasses.isEmpty()){
+            getLogger().warn("No materials found in JARs matching filter: " + jarFilterRegex + ", all jars: " + resolve);
+        }
+
         try {
             Files.writeString(getBuiltFilesRecordFile().toPath(), String.join("\n", fullyQualifiedMaterialClasses));
         } catch (Exception e) {
