@@ -45,6 +45,7 @@ public class TypedMaterialsExtension{
      */
     public void librarySearch(String taskName, String jarFilterRegex, String outputPackage){
         project.getTasks().register(taskName, TypedJarMaterials.class, task -> {
+            task.setGroup("typedMaterials");
             task.setOutputPackage(outputPackage);
             task.setOutputSourcesRoot(project.file(generatedSourcesDir));
             task.setJarFilterRegex(jarFilterRegex);
@@ -71,6 +72,7 @@ public class TypedMaterialsExtension{
      */
     public void localMaterialsSearch(String outputPackage, String materialsDirectory, String resourcesDirName){
         project.getTasks().register("localTypedMaterials", TypedLocalMaterials.class, task -> {
+            task.setGroup("typedMaterials");
             task.setInputDirectory(project.file(materialsDirectory));
             task.setOutputPackage(outputPackage);
             task.setOutputSourcesRoot(project.file(generatedSourcesDir));

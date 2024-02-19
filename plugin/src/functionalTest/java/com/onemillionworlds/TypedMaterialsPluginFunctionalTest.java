@@ -154,6 +154,47 @@ class TypedMaterialsPluginFunctionalTest {
     }
 
     @Test
+    void cleanDeletesFiles() throws IOException {
+        writeString(getSettingsFile(), "");
+        writeString(getBuildFile(),
+                """
+                    plugins {
+                      id('java')
+                      id('com.onemillionworlds.typed-materials')
+                    };
+                    repositories {
+                        mavenCentral()
+                    }
+                    dependencies {
+                         implementation 'org.jmonkeyengine:jme3-core:3.6.1-stable'
+                    }
+                    typedMaterials{
+                      jmeMaterials()
+                    }
+                    """);
+
+        // Run the build
+        GradleRunner assembleRunner = GradleRunner.create();
+        assembleRunner.forwardOutput();
+        assembleRunner.withPluginClasspath();
+        assembleRunner.withArguments("assemble");
+        assembleRunner.withProjectDir(projectDir);
+        assembleRunner.build();
+
+        File lightingMaterial = getGeneratedJavaFile("org/jme3/core/materials/LightingMaterial.java");
+        assertTrue(lightingMaterial.exists());
+
+        GradleRunner cleanRunner = GradleRunner.create();
+        cleanRunner.forwardOutput();
+        cleanRunner.withPluginClasspath();
+        cleanRunner.withArguments("clean");
+        cleanRunner.withProjectDir(projectDir);
+        cleanRunner.build();
+
+        assertFalse(lightingMaterial.exists());
+    }
+
+    @Test
     void outputsProcessedFilesFromLocalMaterials_resourcesStyle() throws IOException {
         writeString(getSettingsFile(), "");
         writeString(getBuildFile(),

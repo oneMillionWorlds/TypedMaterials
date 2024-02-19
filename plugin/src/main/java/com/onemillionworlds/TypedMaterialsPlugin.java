@@ -6,6 +6,7 @@ package com.onemillionworlds;
 import com.onemillionworlds.tasks.MaterialFactoryTask;
 import org.gradle.api.Project;
 import org.gradle.api.Plugin;
+import org.gradle.api.tasks.Delete;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import  com.onemillionworlds.configuration.TypedMaterialsExtension;
@@ -20,6 +21,7 @@ public class TypedMaterialsPlugin implements Plugin<Project> {
         TypedMaterialsExtension extension = project.getExtensions().create("typedMaterials", TypedMaterialsExtension.class, project);
 
         project.getTasks().create("materialFactory", MaterialFactoryTask.class, task -> {
+            task.setGroup("typedMaterials");
             task.setOutputSourcesRoot(project.file(extension.getGeneratedSourcesDir()));
             task.setFullyQualifiedOutputClass(extension.getMaterialFactoryClass().get());
         });
@@ -35,6 +37,14 @@ public class TypedMaterialsPlugin implements Plugin<Project> {
                 mainSourceSet.getJava().srcDir(generatedSourcesDir);
             }
         });
+
+        project.getTasks().register("cleanTypedMaterials", Delete.class, task -> {
+            task.setGroup("typedMaterials");
+            task.delete(project.file(extension.getGeneratedSourcesDir()));
+        });
+
+        project.getTasks().named("clean").configure(compileJava -> compileJava.dependsOn("cleanTypedMaterials"));
+
     }
 
 
