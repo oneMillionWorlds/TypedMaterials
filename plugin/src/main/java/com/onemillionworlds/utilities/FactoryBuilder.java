@@ -20,6 +20,7 @@ public class FactoryBuilder{
                                       * This is useful for dependency injection and testing purposes
                                       * </p>
                                       */
+                                     @SuppressWarnings("all")
                                      public class [FACTORY_NAME]{
                                      
                                          public static final [FACTORY_NAME] INSTANCE = new [FACTORY_NAME]();
