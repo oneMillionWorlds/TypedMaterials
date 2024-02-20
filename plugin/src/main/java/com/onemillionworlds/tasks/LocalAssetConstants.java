@@ -172,7 +172,12 @@ public class LocalAssetConstants extends DefaultTask{
         }
 
         private String makeValidJavaIdentifier(String name){
-            return name.replaceAll("[^a-zA-Z0-9]", "_");
+            String corrected = name.replaceAll("[^a-zA-Z0-9]", "_");
+
+            if (Character.isDigit(corrected.charAt(0))){
+                corrected = "_" + corrected;
+            }
+            return corrected;
         }
     }
 
