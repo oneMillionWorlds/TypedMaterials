@@ -39,7 +39,7 @@ gradlePlugin {
         create("typedMaterialsPlugin") {
             id = "com.onemillionworlds.typed-materials"
             displayName = "Typed Materials Plugin"
-            description = "A plugin to synthesys java classes for jMonkeyEngine materials"
+            description = "A plugin to synthesis java classes for jMonkeyEngine materials"
             tags = listOf("jMonkeyEngine", "oneMillionWorlds", "java")
             implementationClass = "com.onemillionworlds.TypedMaterialsPlugin"
         }
