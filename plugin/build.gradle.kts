@@ -48,7 +48,7 @@ gradlePlugin {
 }
 
 tasks.withType<JavaCompile> {
-    options.compilerArgs.add("-Xlint:-missingdoccomments")
+    options.compilerArgs.add("-Xdoclint:-missing")
 }
 
 // Add a source set for the functional test suite
