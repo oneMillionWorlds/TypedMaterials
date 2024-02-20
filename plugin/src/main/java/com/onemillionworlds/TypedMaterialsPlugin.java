@@ -20,14 +20,6 @@ public class TypedMaterialsPlugin implements Plugin<Project> {
 
         TypedMaterialsExtension extension = project.getExtensions().create("typedMaterials", TypedMaterialsExtension.class, project);
 
-        project.getTasks().create("materialFactory", MaterialFactoryTask.class, task -> {
-            task.setGroup("typedMaterials");
-            task.setOutputSourcesRoot(project.file(extension.getGeneratedSourcesDir()));
-            task.setFullyQualifiedOutputClass(extension.getMaterialFactoryClass().get());
-        });
-
-        project.getTasks().named("compileJava").configure(compileJava -> compileJava.dependsOn("materialFactory"));
-
         project.afterEvaluate(p -> {
             SourceSetContainer sourceSets = project.getExtensions().getByType(SourceSetContainer.class);
             SourceSet mainSourceSet = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);

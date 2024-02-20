@@ -1,6 +1,8 @@
 package com.onemillionworlds.configuration;
 
 import com.onemillionworlds.TypedMaterialsPlugin;
+import com.onemillionworlds.tasks.LocalAssetConstants;
+import com.onemillionworlds.tasks.MaterialFactoryTask;
 import com.onemillionworlds.tasks.TypedJarMaterials;
 import com.onemillionworlds.tasks.TypedLocalMaterials;
 import org.gradle.api.Project;
@@ -36,6 +38,21 @@ public class TypedMaterialsExtension{
         librarySearch("jmeEffectsMaterials", ".*jme3-effects.*", "org.jme3.effects.materials");
     }
 
+    public void assetConstants(String outputPackage){
+        assetConstants(outputPackage, "src/main/resources", "resources");
+    }
+
+    public void assetConstants(String outputPackage, String assetsDirectory, String resourcesDirName){
+        project.getTasks().create("assetConstants", LocalAssetConstants.class, task -> {
+            task.setGroup("typedMaterials");
+            task.setOutputPackage(outputPackage);
+            task.setAssetsFolder(project.file(assetsDirectory));
+            task.setResourcesDirName(resourcesDirName);
+            task.setOutputSourcesRoot(project.file(generatedSourcesDir));
+        });
+        project.getTasks().named("compileJava").configure(compileJava -> compileJava.dependsOn("assetConstants"));
+    }
+
     /**
      * Registers a task to search for materials in the jars of the project's runtime classpath
      * @param taskName just a name for the task, needs to be unique
@@ -50,6 +67,7 @@ public class TypedMaterialsExtension{
             task.setOutputSourcesRoot(project.file(generatedSourcesDir));
             task.setJarFilterRegex(jarFilterRegex);
         });
+        setUpMaterialFactoryTaskIfNotPresent();
         project.getTasks().named("materialFactory").configure(compileJava -> compileJava.dependsOn(taskName));
     }
 
@@ -78,6 +96,7 @@ public class TypedMaterialsExtension{
             task.setOutputSourcesRoot(project.file(generatedSourcesDir));
             task.setResourcesDir(resourcesDirName);
         });
+        setUpMaterialFactoryTaskIfNotPresent();
         project.getTasks().named("materialFactory").configure(compileJava -> compileJava.dependsOn("localTypedMaterials"));
     }
 
@@ -91,5 +110,16 @@ public class TypedMaterialsExtension{
 
     public Property<String> getMaterialFactoryClass(){
         return materialFactoryClass;
+    }
+
+    private void setUpMaterialFactoryTaskIfNotPresent(){
+        if(project.getTasks().findByName("materialFactory") == null){
+            project.getTasks().create("materialFactory", MaterialFactoryTask.class, task -> {
+                task.setGroup("typedMaterials");
+                task.setOutputSourcesRoot(project.file(generatedSourcesDir));
+                task.setFullyQualifiedOutputClass(materialFactoryClass.get());
+            });
+            project.getTasks().named("compileJava").configure(compileJava -> compileJava.dependsOn("materialFactory"));
+        }
     }
 }

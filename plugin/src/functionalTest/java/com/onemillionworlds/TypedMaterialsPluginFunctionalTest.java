@@ -56,8 +56,14 @@ class TypedMaterialsPluginFunctionalTest {
         return new File(getGeneratedJavaFilesRoot(),  pathRelativeToRoot);
     }
 
+    private File localResourcesRoot_resourcesStyle(){
+        File directory = new File(projectDir,  "src/main/resources");
+        directory.mkdirs();
+        return directory;
+    }
+
     private File localMaterialsRoot_resourcesStyle() {
-        File directory = new File(projectDir,  "src/main/resources/MatDefs");
+        File directory = new File(localResourcesRoot_resourcesStyle(),  "/MatDefs");
         directory.mkdirs();
         return directory;
     }
@@ -306,6 +312,75 @@ class TypedMaterialsPluginFunctionalTest {
 
     }
 
+    @Test
+    void localAssetConstants() throws IOException{
+        writeString(getSettingsFile(), "");
+        writeString(getBuildFile(),
+                """
+                    plugins {
+                      id('java')
+                      id('com.onemillionworlds.typed-materials')
+                    };
+                    repositories {
+                        mavenCentral()
+                    }
+                    typedMaterials{
+                      assetConstants('com.myproject.assets')
+                    }
+                    """);
+
+
+        String fileContents = "This is just a test";
+        File resourcesRoot = localResourcesRoot_resourcesStyle();
+        File materialsRoot = new File(resourcesRoot, "MatDefs");
+        File texturesRoot = new File(resourcesRoot, "Textures");
+        File texturesSubFolder = new File(texturesRoot, "texturesSubFolder");
+
+        materialsRoot.mkdirs();
+        texturesSubFolder.mkdirs();
+
+        File textureFile1 = new File(texturesRoot, "texture1.txt");
+        File textureFile1_clashing = new File(texturesRoot, "texture1.json");
+        File textureFile3 = new File(texturesRoot, "texture3.txt");
+
+        File textureFile4_inSubFolder = new File(texturesSubFolder, "texture4.txt");
+
+        writeString(textureFile1, fileContents);
+        writeString(textureFile1_clashing, fileContents);
+        writeString(textureFile3, fileContents);
+        writeString(textureFile4_inSubFolder, fileContents);
+
+        writeString(new File(materialsRoot, "Material1.txt"), fileContents);
+
+        GradleRunner runner = GradleRunner.create();
+        runner.forwardOutput();
+        runner.withPluginClasspath();
+        runner.withArguments("assemble");
+        runner.withProjectDir(projectDir);
+        BuildResult result = runner.build();
+
+        String content = Files.readString(getGeneratedJavaFile("com/myproject/assets/Assets.java").toPath());
+
+        String expectedMaterialsSection = """
+                    public static class MatDefs{
+                        public static final String MATERIAL1 = "MatDefs/Material1.txt";
+                    }
+                """;
+
+        String expectedTexturesSection = """
+                    public static class Textures{
+                        public static final String TEXTURE1 = "Textures/texture1.json";
+                        public static final String TEXTURE1_TXT = "Textures/texture1.txt";
+                        public static final String TEXTURE3 = "Textures/texture3.txt";
+                        public static class TexturesSubFolder{
+                            public static final String TEXTURE4 = "Textures/texturesSubFolder/texture4.txt";
+                        }
+                    }
+                """;
+
+        assertTrue(content.contains(expectedMaterialsSection));
+        assertTrue(content.contains(expectedTexturesSection));
+    }
 
     private void writeString(File file, String string) throws IOException {
         try (Writer writer = new FileWriter(file)) {
