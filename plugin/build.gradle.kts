@@ -47,6 +47,10 @@ gradlePlugin {
 
 }
 
+tasks.withType<JavaCompile> {
+    options.compilerArgs.add("-Xlint:-missingdoccomments")
+}
+
 // Add a source set for the functional test suite
 val functionalTestSourceSet = sourceSets.create("functionalTest") {
 }
