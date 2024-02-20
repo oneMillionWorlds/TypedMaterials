@@ -130,8 +130,8 @@ public class LocalAssetConstants extends DefaultTask{
             Set<String> usedSimpleNames = new HashSet<>();
 
             for(String asset : assetsOnThisLevel){
-                String complexName = makeValidJavaIdentifier(asset.toUpperCase());
-                String simpleName = makeValidJavaIdentifier(asset.toUpperCase().replaceAll("\\..*", ""));
+                String complexName = toUpperSnakeCase(makeValidJavaIdentifier(asset));
+                String simpleName = toUpperSnakeCase(makeValidJavaIdentifier(asset.replaceAll("\\..*", "")));
                 String nameToUse;
                 if (!usedSimpleNames.contains(simpleName)){
                     nameToUse = simpleName;
@@ -178,6 +178,10 @@ public class LocalAssetConstants extends DefaultTask{
                 corrected = "_" + corrected;
             }
             return corrected;
+        }
+
+        private String toUpperSnakeCase(String name){
+            return name.replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase();
         }
     }
 

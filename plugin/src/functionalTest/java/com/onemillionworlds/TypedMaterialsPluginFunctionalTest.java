@@ -343,7 +343,7 @@ class TypedMaterialsPluginFunctionalTest {
         File textureFile1_clashing = new File(texturesRoot, "texture1.json");
         File textureFile3 = new File(texturesRoot, "texture3.txt");
 
-        File textureFile4_inSubFolder = new File(texturesSubFolder, "texture4.txt");
+        File textureFile4_inSubFolder = new File(texturesSubFolder, "snakeCaseTest.txt");
 
         writeString(textureFile1, fileContents);
         writeString(textureFile1_clashing, fileContents);
@@ -373,7 +373,7 @@ class TypedMaterialsPluginFunctionalTest {
                         public static final String TEXTURE1_TXT = "Textures/texture1.txt";
                         public static final String TEXTURE3 = "Textures/texture3.txt";
                         public static class TexturesSubFolder{
-                            public static final String TEXTURE4 = "Textures/texturesSubFolder/texture4.txt";
+                            public static final String SNAKE_CASE_TEST = "Textures/texturesSubFolder/snakeCaseTest.txt";
                         }
                     }
                 """;
