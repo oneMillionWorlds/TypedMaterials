@@ -1,4 +1,4 @@
-name: Release to maven central without tagging or pushing to gradle plugin portal
+name: Stage to maven central without tagging or pushing to gradle plugin portal
 
 on:
   workflow_dispatch:
