@@ -9,6 +9,7 @@ plugins {
     id("java-gradle-plugin")
     id("maven-publish")
     id("signing")
+    id("com.gradle.plugin-publish") version "1.2.1"
 }
 
 group = "com.onemillionworlds"
@@ -32,10 +33,18 @@ dependencies {
 }
 
 gradlePlugin {
-    val typedMaterialsPlugin by plugins.creating {
-        id = "com.onemillionworlds.typed-materials"
-        implementationClass = "com.onemillionworlds.TypedMaterialsPlugin"
+    plugins {
+        website = "https://github.com/oneMillionWorlds/TypedMaterials/wiki"
+        vcsUrl = "https://github.com/oneMillionWorlds/TypedMaterials"
+        create("typedMaterialsPlugin") {
+            id = "com.onemillionworlds.typed-materials"
+            displayName = "Typed Materials Plugin"
+            description = "A plugin to synthesys java classes for jMonkeyEngine materials"
+            tags = listOf("jMonkeyEngine", "oneMillionWorlds", "java")
+            implementationClass = "com.onemillionworlds.TypedMaterialsPlugin"
+        }
     }
+
 }
 
 // Add a source set for the functional test suite
