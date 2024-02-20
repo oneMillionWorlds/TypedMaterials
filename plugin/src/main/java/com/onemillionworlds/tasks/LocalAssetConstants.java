@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -62,7 +63,7 @@ public class LocalAssetConstants extends DefaultTask{
 
         AssetsFolder assetsFolder = new AssetsFolder(currentPath);
 
-        for( File fileToProcess : file.listFiles()){
+        for( File fileToProcess : Arrays.stream(file.listFiles()).sorted().toList()){
             if (fileToProcess.isFile()){
                 assetsFolder.addAsset(fileToProcess.getName());
             }else{
