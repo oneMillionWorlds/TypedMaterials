@@ -30,7 +30,7 @@ public class LocalAssetConstants extends DefaultTask{
                                       * @see <a href="https://github.com/oneMillionWorlds/TypedMaterials/wiki">MaterialTyper Plugin Wiki</a>
                                       */
                                      @SuppressWarnings("all")
-                                     public class Assets {
+                                     public class [CLASS] {
                                      
                                      [CONTENT]
                                      
@@ -38,7 +38,7 @@ public class LocalAssetConstants extends DefaultTask{
 
     File assetsFolder;
 
-    String outputPackage;
+    String fullyQualifiedAssetsClass;
 
     File outputSourcesRoot;
 
@@ -49,7 +49,8 @@ public class LocalAssetConstants extends DefaultTask{
         String classContent = searchForAllMaterials(assetsFolder, "").getJavaClassContent(1);
 
         String fullClass = classTemplate
-                .replace("[PACKAGE]", outputPackage)
+                .replace("[PACKAGE]", getDestinationPackage())
+                .replace("[CLASS]", getClassName())
                 .replace("[CONTENT]", classContent);
 
         try {
@@ -76,8 +77,8 @@ public class LocalAssetConstants extends DefaultTask{
     }
 
     @Input
-    public String getOutputPackage(){
-        return outputPackage;
+    public String getFullyQualifiedAssetsClass(){
+        return fullyQualifiedAssetsClass;
     }
 
     @InputDirectory
@@ -87,8 +88,7 @@ public class LocalAssetConstants extends DefaultTask{
 
     @OutputFile
     public File getDestinationFile(){
-        String packageFolder = outputPackage.replace(".", "/");
-        return new File(new File(outputSourcesRoot, packageFolder), "Assets.java");
+        return new File(outputSourcesRoot, fullyQualifiedAssetsClass.replace(".", "/") + ".java");
     }
 
     @Input
@@ -104,12 +104,22 @@ public class LocalAssetConstants extends DefaultTask{
         this.outputSourcesRoot = outputSourcesRoot;
     }
 
-    public void setOutputPackage(String outputPackage){
-        this.outputPackage = outputPackage;
+    public void setFullyQualifiedAssetsClass(String fullyQualifiedAssetsClass){
+        this.fullyQualifiedAssetsClass = fullyQualifiedAssetsClass;
     }
 
     public void setAssetsFolder(File assetsFolder){
         this.assetsFolder = assetsFolder;
+    }
+
+    private String getDestinationPackage(){
+        return fullyQualifiedAssetsClass
+                .replaceAll("\\.[A-Za-z0-9_]+$", "");
+    }
+
+    private String getClassName(){
+        return fullyQualifiedAssetsClass
+                .replaceAll(".*\\.", "");
     }
 
 

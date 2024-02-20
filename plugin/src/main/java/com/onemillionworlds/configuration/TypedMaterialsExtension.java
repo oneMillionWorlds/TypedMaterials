@@ -38,14 +38,14 @@ public class TypedMaterialsExtension{
         librarySearch("jmeEffectsMaterials", ".*jme3-effects.*", "org.jme3.effects.materials");
     }
 
-    public void assetConstants(String outputPackage){
-        assetConstants(outputPackage, "src/main/resources", "resources");
+    public void assetConstants(String fullyQualifiedAssetsClass){
+        assetConstants(fullyQualifiedAssetsClass, "src/main/resources", "resources");
     }
 
-    public void assetConstants(String outputPackage, String assetsDirectory, String resourcesDirName){
+    public void assetConstants(String fullyQualifiedAssetsClass, String assetsDirectory, String resourcesDirName){
         project.getTasks().create("assetConstants", LocalAssetConstants.class, task -> {
             task.setGroup("typedMaterials");
-            task.setOutputPackage(outputPackage);
+            task.setFullyQualifiedAssetsClass(fullyQualifiedAssetsClass);
             task.setAssetsFolder(project.file(assetsDirectory));
             task.setResourcesDirName(resourcesDirName);
             task.setOutputSourcesRoot(project.file(generatedSourcesDir));

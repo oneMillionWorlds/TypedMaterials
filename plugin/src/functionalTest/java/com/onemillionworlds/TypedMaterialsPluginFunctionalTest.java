@@ -325,7 +325,7 @@ class TypedMaterialsPluginFunctionalTest {
                         mavenCentral()
                     }
                     typedMaterials{
-                      assetConstants('com.myproject.assets')
+                      assetConstants('com.myproject.assets.Assets')
                     }
                     """);
 
