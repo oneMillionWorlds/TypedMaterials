@@ -378,8 +378,8 @@ class TypedMaterialsPluginFunctionalTest {
                     }
                 """;
 
-        assertTrue(content.contains(expectedMaterialsSection));
-        assertTrue(content.contains(expectedTexturesSection));
+        assertTrue(content.contains(expectedMaterialsSection), content);
+        assertTrue(content.contains(expectedTexturesSection), content);
     }
 
     private void writeString(File file, String string) throws IOException {
