@@ -39,6 +39,10 @@ public class TypedMaterialsExtension{
     }
 
 
+    /**
+     * Registers a task to search for assets in the resources directory(s) of the project and create constants for each one.
+     * @param fullyQualifiedAssetsClass the fully qualified name of the class will be generated to contains the asset paths. E.g. "com.mygame.assets.Assets"
+     */
     public void assetConstants(String fullyQualifiedAssetsClass){
         project.getTasks().create("assetConstants", LocalAssetConstants.class, task -> {
             task.setGroup("typedMaterials");
