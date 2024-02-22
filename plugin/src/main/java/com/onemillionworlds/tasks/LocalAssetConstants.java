@@ -1,9 +1,13 @@
 package com.onemillionworlds.tasks;
 
 import org.gradle.api.DefaultTask;
+import org.gradle.api.Project;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskAction;
 
 import java.io.File;
@@ -36,17 +40,19 @@ public class LocalAssetConstants extends DefaultTask{
                                      
                                      }""";
 
-    File assetsFolder;
-
     String fullyQualifiedAssetsClass;
 
     File outputSourcesRoot;
 
-    String resourcesDirName = "resources";
-
     @TaskAction
     public void createTypedMaterials() throws IOException{
-        String classContent = searchForAllMaterials(assetsFolder, "").getJavaClassContent(1);
+        AssetsFolder assetsFolder = new AssetsFolder("");
+
+        for(File folder : getFileCollectionFromSourceDirs()){
+            assetsFolder.addAll(searchForAllFiles(folder, ""));
+        }
+
+        String classContent = assetsFolder.getJavaClassContent(1);
 
         String fullClass = classTemplate
                 .replace("[PACKAGE]", getDestinationPackage())
@@ -60,7 +66,7 @@ public class LocalAssetConstants extends DefaultTask{
         }
     }
 
-    private AssetsFolder searchForAllMaterials(File file, String currentPath) throws IOException{
+    private AssetsFolder searchForAllFiles(File file, String currentPath) throws IOException{
 
         AssetsFolder assetsFolder = new AssetsFolder(currentPath);
 
@@ -68,7 +74,7 @@ public class LocalAssetConstants extends DefaultTask{
             if (fileToProcess.isFile()){
                 assetsFolder.addAsset(fileToProcess.getName());
             }else{
-                AssetsFolder subFolder = searchForAllMaterials(fileToProcess, currentPath + (currentPath.isBlank()?"":"/") + fileToProcess.getName());
+                AssetsFolder subFolder = searchForAllFiles(fileToProcess, currentPath + (currentPath.isBlank()?"":"/") + fileToProcess.getName());
                 assetsFolder.addSubfolder(fileToProcess.getName(), subFolder);
             }
         }
@@ -81,23 +87,25 @@ public class LocalAssetConstants extends DefaultTask{
         return fullyQualifiedAssetsClass;
     }
 
-    @InputDirectory
-    public File getAssetsFolder(){
-        return assetsFolder;
+    /*
+    @InputFiles
+    public Collection<File> getFoldersToProcess(){
+        SourceSetContainer sourceSets = (SourceSetContainer) getProject().getProperties().get("sourceSets");
+        SourceSet mainSourceSet = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
+        return mainSourceSet.getResources().getSrcDirs();
+    }*/
+
+    @InputFiles
+    public FileCollection getFileCollectionFromSourceDirs() {
+        Project project = getProject();
+        SourceSetContainer sourceSets = (SourceSetContainer) project.getProperties().get("sourceSets");
+        SourceSet mainSourceSet = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
+        return project.files(mainSourceSet.getResources().getSrcDirs());
     }
 
     @OutputFile
     public File getDestinationFile(){
         return new File(outputSourcesRoot, fullyQualifiedAssetsClass.replace(".", "/") + ".java");
-    }
-
-    @Input
-    public String getResourcesDirName(){
-        return resourcesDirName;
-    }
-
-    public void setResourcesDirName(String resourcesDirName){
-        this.resourcesDirName = resourcesDirName;
     }
 
     public void setOutputSourcesRoot(File outputSourcesRoot){
@@ -106,10 +114,6 @@ public class LocalAssetConstants extends DefaultTask{
 
     public void setFullyQualifiedAssetsClass(String fullyQualifiedAssetsClass){
         this.fullyQualifiedAssetsClass = fullyQualifiedAssetsClass;
-    }
-
-    public void setAssetsFolder(File assetsFolder){
-        this.assetsFolder = assetsFolder;
     }
 
     private String getDestinationPackage(){
@@ -192,6 +196,17 @@ public class LocalAssetConstants extends DefaultTask{
 
         private String toUpperSnakeCase(String name){
             return name.replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase();
+        }
+
+        public void addAll(AssetsFolder assetsFolder){
+            assetsOnThisLevel.addAll(assetsFolder.assetsOnThisLevel);
+            for(Map.Entry<String, AssetsFolder> subfolder : assetsFolder.subfolders.entrySet()){
+                if (subfolders.containsKey(subfolder.getKey())){
+                    subfolders.get(subfolder.getKey()).addAll(subfolder.getValue());
+                }else{
+                    subfolders.put(subfolder.getKey(), subfolder.getValue());
+                }
+            }
         }
     }
 
