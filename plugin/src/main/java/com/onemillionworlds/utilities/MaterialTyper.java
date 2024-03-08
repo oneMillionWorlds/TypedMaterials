@@ -43,6 +43,13 @@ public class MaterialTyper{
                                      @SuppressWarnings("all")
                                      public class [MATERIAL_NAME] extends Material {
                                      
+                                         /**
+                                         * Do not use this constructor. Serialization purposes only.
+                                         */
+                                         public [MATERIAL_NAME]() {
+                                             super();
+                                         }
+                                     
                                          public [MATERIAL_NAME](AssetManager contentMan) {
                                              super(contentMan, "[DEF_NAME]");
                                          }
