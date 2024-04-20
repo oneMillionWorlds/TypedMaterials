@@ -13,7 +13,7 @@ plugins {
 }
 
 group = "com.onemillionworlds"
-version = "1.1.1"
+version = "1.2.0"
 
 repositories {
     // Use Maven Central for resolving dependencies.
