@@ -363,16 +363,19 @@ class TypedMaterialsPluginFunctionalTest {
 
         String expectedMaterialsSection = """
                     public static class MatDefs{
+                        public static final String FOLDER_PATH = "MatDefs";
                         public static final String MATERIAL1 = "MatDefs/Material1.txt";
                     }
                 """;
 
         String expectedTexturesSection = """
                     public static class Textures{
+                        public static final String FOLDER_PATH = "Textures";
                         public static final String TEXTURE1 = "Textures/texture1.json";
                         public static final String TEXTURE1_TXT = "Textures/texture1.txt";
                         public static final String TEXTURE3 = "Textures/texture3.txt";
                         public static class TexturesSubFolder{
+                            public static final String FOLDER_PATH = "Textures/texturesSubFolder";
                             public static final String SNAKE_CASE_TEST = "Textures/texturesSubFolder/snakeCaseTest.txt";
                         }
                     }

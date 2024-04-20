@@ -143,6 +143,12 @@ public class LocalAssetConstants extends DefaultTask{
 
             Set<String> usedSimpleNames = new HashSet<>();
 
+            content
+                    .append(" ".repeat(indentLevel*4))
+                    .append("public static final String FOLDER_PATH")
+                    .append(" = \"").append(assetFolderPath).append("\";\n");
+            usedSimpleNames.add("FOLDER_PATH");
+
             for(String asset : assetsOnThisLevel){
                 String complexName = toUpperSnakeCase(makeValidJavaIdentifier(asset));
                 String simpleName = toUpperSnakeCase(makeValidJavaIdentifier(asset.replaceAll("\\..*", "")));
