@@ -52,7 +52,7 @@ public class LocalAssetConstants extends DefaultTask{
             assetsFolder.addAll(searchForAllFiles(folder, ""));
         }
 
-        String classContent = assetsFolder.getJavaClassContent(1);
+        String classContent = assetsFolder.getJavaClassContent(1, List.of(getClassName()));
 
         String fullClass = classTemplate
                 .replace("[PACKAGE]", getDestinationPackage())
@@ -138,17 +138,18 @@ public class LocalAssetConstants extends DefaultTask{
             this.assetFolderPath = assetFolderPath;
         }
 
-        public String getJavaClassContent(int indentLevel){
+        public String getJavaClassContent(int indentLevel, List<String> parentFolders){
             StringBuilder content = new StringBuilder();
 
             Set<String> usedSimpleNames = new HashSet<>();
 
-            content
-                    .append(" ".repeat(indentLevel*4))
-                    .append("public static final String FOLDER_PATH")
-                    .append(" = \"").append(assetFolderPath).append("\";\n");
-            usedSimpleNames.add("FOLDER_PATH");
-
+            if(indentLevel>1){
+                content
+                        .append(" ".repeat(indentLevel * 4))
+                        .append("public static final String FOLDER_PATH")
+                        .append(" = \"").append(assetFolderPath).append("\";\n");
+                usedSimpleNames.add("FOLDER_PATH");
+            }
             for(String asset : assetsOnThisLevel){
                 String complexName = toUpperSnakeCase(makeValidJavaIdentifier(asset));
                 String simpleName = toUpperSnakeCase(makeValidJavaIdentifier(asset.replaceAll("\\..*", "")));
@@ -166,15 +167,25 @@ public class LocalAssetConstants extends DefaultTask{
                         .append(" = \"").append(assetFolderPath + "/"+asset).append("\";\n");
             }
 
+            if(indentLevel>1){
+                content.append("\n")
+                        .append(" ".repeat(indentLevel * 4)).append("public static String child(String child){\n")
+                        .append(" ".repeat(indentLevel * 4)).append("    return FOLDER_PATH + \"/\" + child;\n")
+                        .append(" ".repeat(indentLevel * 4)).append("}\n");
+            }
+
             for(Map.Entry<String, AssetsFolder> subfolder : subfolders.entrySet()){
+                List<String> parentFoldersForChild = new ArrayList<>(parentFolders);
+                parentFoldersForChild.add(subfolder.getKey());
                 content
                         .append(" ".repeat(indentLevel*4))
-                        .append("public static class ").append(makeValidJavaClass(subfolder.getKey()))
+                        .append("public static class ").append(makeValidJavaClass(subfolder.getKey(), parentFolders))
                         .append("{\n")
-                        .append(subfolder.getValue().getJavaClassContent(indentLevel+1))
+                        .append(subfolder.getValue().getJavaClassContent(indentLevel+1, parentFoldersForChild))
                         .append(" ".repeat(indentLevel*4))
                         .append("}\n");
             }
+
             return content.toString();
         }
 
@@ -186,9 +197,15 @@ public class LocalAssetConstants extends DefaultTask{
             subfolders.put(subfolder, assetsFolder);
         }
 
-        private String makeValidJavaClass(String name){
+        private String makeValidJavaClass(String name, List<String> parentFolders){
             String validIdentifier = makeValidJavaIdentifier(name);
-            return validIdentifier.substring(0, 1).toUpperCase() + validIdentifier.substring(1);
+            int numberOfParentsWithSameName = (int) parentFolders.stream()
+                    .map(this::makeValidJavaIdentifier)
+                    .filter(folder -> folder.equals(validIdentifier)).count();
+            String numericSuffix = numberOfParentsWithSameName == 0 ? "" : "_"+(numberOfParentsWithSameName+1);
+
+            String validIdentifierWithSuffix = makeValidJavaIdentifier(name) + numericSuffix;
+            return validIdentifierWithSuffix.substring(0, 1).toUpperCase() + validIdentifierWithSuffix.substring(1);
         }
 
         private String makeValidJavaIdentifier(String name){
