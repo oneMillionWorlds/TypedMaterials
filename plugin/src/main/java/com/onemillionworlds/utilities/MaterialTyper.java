@@ -5,8 +5,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -185,22 +188,21 @@ public class MaterialTyper{
         simpleAddTemplate.accept("BufferObject", "BufferObject");
     }
 
+    public static Material process(String j3mdContents) throws IOException{
+        List<MaterialParameter> materialParameters = new ArrayList<>();
 
-
-    public static String createMaterialClassFile(String fullDefName, String className, String packageName, String j3mdContents, String generatedFromComment, boolean wrapper) throws IOException{
         Matcher matcher = extractMaterialParameters.matcher(j3mdContents);
         String materialParams = "";
         if (matcher.find()){
             materialParams = matcher.group(1);
         }
 
-        StringBuilder content = new StringBuilder();
         StringBuilder commentUnderConstruction = new StringBuilder();
         boolean anyComment = false;
 
         BufferedReader bufReader = new BufferedReader(new StringReader(materialParams));
 
-        String line=null;
+        String line;
         while( (line=bufReader.readLine()) != null )
         {
 
@@ -208,10 +210,10 @@ public class MaterialTyper{
             Matcher paramMatcher = paramLine.matcher(line);
             if (commentMatcher.find()){
                 if(anyComment){
-                    commentUnderConstruction.append(" <br>\n");
+                    commentUnderConstruction.append("\n");
                 }
 
-                commentUnderConstruction.append(" * " +commentMatcher.group(1));
+                commentUnderConstruction.append(commentMatcher.group(1));
 
                 anyComment = true;
             }else if(paramMatcher.find()){
@@ -220,47 +222,64 @@ public class MaterialTyper{
 
                 String comment = commentUnderConstruction.toString();
 
-
-                MaterialParameterMetadata materialParameterMetadata = templates.get(type);
-
-                if (materialParameterMetadata == null){
+                if (templates.get(type) == null){
                     throw new RuntimeException("Unknown material parameter type: " + type);
                 }
+                String javaType = templates.get(type).javaType();
 
-                String setTemplate = materialParameterMetadata.setTemplate;
-                String getTemplate = materialParameterMetadata.getTemplate;
+                materialParameters.add(new MaterialParameter(
+                        nameUpperCamelCase,
+                        type,
+                        javaType,
+                        anyComment ? Optional.of(comment) : Optional.empty()
 
-                if(wrapper){
-                    setTemplate = "material." + setTemplate;
-                    getTemplate = getTemplate.replace("return ", "return material.");
-                }
+                ));
 
-                String setMethod = setMethodTemplate
-                        .replace("[TYPE]", materialParameterMetadata.javaType)
-                        .replace("[CONTENT]", setTemplate)
-                        .replace("[PARAMETER_NAME]", nameUpperCamelCase)
-                        .replace("[PARAMETER_NAME_LOWER_CAMEL_CASE]", toLowerCamlCase(nameUpperCamelCase));
-
-                String getMethod = getMethodTemplate
-                        .replace("[CONTENT]", getTemplate)
-                        .replace("[TYPE]", materialParameterMetadata.javaType)
-                        .replace("[PARAMETER_NAME]", nameUpperCamelCase)
-                        .replace("[PARAMETER_NAME_LOWER_CAMEL_CASE]", toLowerCamlCase(nameUpperCamelCase));
-
-                if(!comment.isBlank()){
-                    content.append("/**\n" + comment + "\n */\n");
-                }
-                content.append(setMethod).append("\n\n");
-                if(!comment.isBlank()){
-                    content.append("\n/**\n" + comment + "\n */\n");
-                }
-                content.append(getMethod).append("\n\n");
                 anyComment = false;
                 commentUnderConstruction = new StringBuilder();
             }
+        }
+        return new Material(materialParameters);
+    }
+
+    public static String createMaterialClassFile(String fullDefName, String className, String packageName, String j3mdContents, String generatedFromComment, boolean wrapper) throws IOException{
+        Material material = process(j3mdContents);
+
+        StringBuilder content = new StringBuilder();
+
+        for(MaterialParameter parameter : material.parameters()){
+            MaterialParameterMetadata materialParameterMetadata = templates.get(parameter.type());
+
+            String setTemplate = materialParameterMetadata.setTemplate;
+            String getTemplate = materialParameterMetadata.getTemplate;
+
+            if(wrapper){
+                setTemplate = "material." + setTemplate;
+                getTemplate = getTemplate.replace("return ", "return material.");
+            }
+
+            String setMethod = setMethodTemplate
+                    .replace("[TYPE]", materialParameterMetadata.javaType)
+                    .replace("[CONTENT]", setTemplate)
+                    .replace("[PARAMETER_NAME]", parameter.name())
+                    .replace("[PARAMETER_NAME_LOWER_CAMEL_CASE]", toLowerCamlCase(parameter.name()));
+
+            String getMethod = getMethodTemplate
+                    .replace("[CONTENT]", getTemplate)
+                    .replace("[TYPE]", materialParameterMetadata.javaType)
+                    .replace("[PARAMETER_NAME]", parameter.name())
+                    .replace("[PARAMETER_NAME_LOWER_CAMEL_CASE]", toLowerCamlCase(parameter.name()));
+
+            Optional<String> commentJavaReady = parameter.comment().map(MaterialTyper::formatCommentSectionForJava );
+
+            commentJavaReady.ifPresent(c -> content.append("/**\n").append(c).append("\n */\n"));
+            content.append(setMethod).append("\n\n");
+
+            commentJavaReady.ifPresent(c -> content.append("/**\n" + c + "\n */\n"));
+            content.append(getMethod).append("\n\n");
+
 
         }
-
 
         String fullClass = (wrapper ? wrapperTemplate : classTemplate)
                 .replace("[DEF_NAME]", fullDefName)
@@ -270,6 +289,19 @@ public class MaterialTyper{
                 .replace("[CONTENT]", indent(content.toString(), 4));
 
         return fullClass;
+    }
+
+    private static String formatCommentSectionForJava(String rawComment){
+        String[] lines = rawComment.split("\n");
+        StringBuilder output = new StringBuilder();
+        for(int i=0; i<lines.length; i++){
+            boolean lastLine = i == lines.length - 1;
+            output.append(" * ").append(lines[i]);
+            if(!lastLine){
+                output.append(" <br>\n");
+            }
+        }
+        return output.toString();
     }
 
     private static String toLowerCamlCase(String upperCamelCase){
@@ -299,6 +331,14 @@ public class MaterialTyper{
         } catch(IOException e){
             throw new RuntimeException(e);
         }
+    }
+
+    public record Material(List<MaterialParameter> parameters){
+
+    }
+
+    public record MaterialParameter(String name, String type, String javaType, Optional<String> comment){
+
     }
 
     private record MaterialParameterMetadata(String javaType, String setTemplate, String getTemplate){

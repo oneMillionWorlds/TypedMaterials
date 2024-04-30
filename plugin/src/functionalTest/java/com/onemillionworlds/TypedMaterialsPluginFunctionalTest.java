@@ -28,6 +28,7 @@ class TypedMaterialsPluginFunctionalTest {
                     // Current usage fraction, from 0 to 1
                     Float FillFraction
                     // 0 or 1, if indeterminate will have a stiped pattern
+                    // Also, this is a second line
                     Int Indeterminate
                 }
             }
@@ -254,6 +255,15 @@ class TypedMaterialsPluginFunctionalTest {
                     }
                 """));
 
+        assertTrue(content.contains("""
+                    /**
+                     *  0 or 1, if indeterminate will have a stiped pattern <br>
+                     *  Also, this is a second line
+                     */
+                    public void setIndeterminate(int indeterminate){
+                        setInt("Indeterminate", indeterminate);
+                    }
+                """));
     }
 
     @Test
