@@ -6,6 +6,7 @@ import org.gradle.api.file.FileCollection;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskAction;
@@ -44,6 +45,8 @@ public class LocalAssetConstants extends DefaultTask{
 
     File outputSourcesRoot;
 
+    File outputResourcesRoot;
+
     @TaskAction
     public void createTypedMaterials() throws IOException{
         AssetsFolder assetsFolder = new AssetsFolder("");
@@ -51,16 +54,20 @@ public class LocalAssetConstants extends DefaultTask{
         for(File folder : getFileCollectionFromSourceDirs()){
             assetsFolder.addAll(searchForAllFiles(folder, ""));
         }
-
-        String classContent = assetsFolder.getJavaClassContent(1, List.of(getClassName()));
-
-        String fullClass = classTemplate
-                .replace("[PACKAGE]", getDestinationPackage())
-                .replace("[CLASS]", getClassName())
-                .replace("[CONTENT]", classContent);
-
         try {
-            Files.writeString(getDestinationFile().toPath(), fullClass);
+            if(getDestinationFile() != null){
+                String classContent = assetsFolder.getJavaClassContent(1, List.of(getClassName()));
+
+                String fullClass = classTemplate
+                        .replace("[PACKAGE]", getDestinationPackage())
+                        .replace("[CLASS]", getClassName())
+                        .replace("[CONTENT]", classContent);
+                Files.writeString(getDestinationFile().toPath(), fullClass);
+            }
+            if(getDestinationFlatFile()!=null){
+                String flatFile = assetsFolder.getFileListingContent();
+                Files.writeString(getDestinationFlatFile().toPath(), flatFile);
+            }
         } catch (Exception e) {
             throw new RuntimeException("Error writing record of generation: " + getName() + ". " + e.getMessage(), e);
         }
@@ -82,6 +89,7 @@ public class LocalAssetConstants extends DefaultTask{
         return assetsFolder;
     }
 
+    @Optional
     @Input
     public String getFullyQualifiedAssetsClass(){
         return fullyQualifiedAssetsClass;
@@ -103,13 +111,30 @@ public class LocalAssetConstants extends DefaultTask{
         return project.files(mainSourceSet.getResources().getSrcDirs());
     }
 
+    @Optional
     @OutputFile
     public File getDestinationFile(){
+        if(outputSourcesRoot == null || fullyQualifiedAssetsClass == null){
+            return null;
+        }
         return new File(outputSourcesRoot, fullyQualifiedAssetsClass.replace(".", "/") + ".java");
+    }
+
+    @Optional
+    @OutputFile
+    public File getDestinationFlatFile(){
+        if(outputResourcesRoot == null){
+            return null;
+        }
+        return new File(outputResourcesRoot, "com.onemillionworlds.typedmaterials.assets.txt");
     }
 
     public void setOutputSourcesRoot(File outputSourcesRoot){
         this.outputSourcesRoot = outputSourcesRoot;
+    }
+
+    public void setOutputResourcesRoot(File outputResourcesRoot){
+        this.outputResourcesRoot = outputResourcesRoot;
     }
 
     public void setFullyQualifiedAssetsClass(String fullyQualifiedAssetsClass){
@@ -189,6 +214,21 @@ public class LocalAssetConstants extends DefaultTask{
             return content.toString();
         }
 
+        /**
+         * This is just a list of all the files, which is put into the resources folder to be pickd up in other modules
+         * (if desired) to create a single super assets class
+         */
+        public String getFileListingContent(){
+            StringBuilder content = new StringBuilder();
+            for(String assetOnThisLevel : assetsOnThisLevel){
+                content.append(assetFolderPath).append("/").append(assetOnThisLevel).append("\n");
+            }
+            for(AssetsFolder subfolder : subfolders.values()){
+                content.append(subfolder.getFileListingContent());
+            }
+            return content.toString();
+        }
+
         public void addAsset(String asset){
             assetsOnThisLevel.add(asset);
         }
@@ -231,6 +271,7 @@ public class LocalAssetConstants extends DefaultTask{
                 }
             }
         }
+
     }
 
 }

@@ -52,9 +52,17 @@ class TypedMaterialsPluginFunctionalTest {
         return new File(projectDir,  "src/main/generated/java");
     }
 
+    private File getGeneratedResourcesFilesRoot() {
+        return new File(projectDir,  "src/main/generated/resources");
+    }
+
 
     private File getGeneratedJavaFile(String pathRelativeToRoot) {
         return new File(getGeneratedJavaFilesRoot(),  pathRelativeToRoot);
+    }
+
+    private File getGeneratedResourcesFile(String pathRelativeToRoot) {
+        return new File(getGeneratedResourcesFilesRoot(),  pathRelativeToRoot);
     }
 
     private File localResourcesRoot_resourcesStyle(){
@@ -484,6 +492,67 @@ class TypedMaterialsPluginFunctionalTest {
                             }
                         }
                     }
+                """;
+
+        assertTrue(content.contains(expectedTexturesSection), content);
+    }
+
+    /**
+     * In java a class Foo can't contain a child class also called Foo. This test
+     * ensures those aren't generated
+     */
+    @Test
+    void localAssetConstantsFlatFileListing() throws IOException{
+        writeString(getSettingsFile(), "");
+        writeString(getBuildFile(),
+                """
+                    plugins {
+                      id('java')
+                      id('com.onemillionworlds.typed-materials')
+                    };
+                    repositories {
+                        mavenCentral()
+                    }
+                    typedMaterials{
+                      assetsFile()
+                    }
+                    """);
+
+
+        String fileContents = "This is just a test";
+        File resourcesRoot = localResourcesRoot_resourcesStyle();
+        File texturesRoot = new File(resourcesRoot, "Textures");
+        File texturesSubFolder = new File(texturesRoot, "Textures");
+        File texturesSubSubFolder = new File(texturesSubFolder, "Textures");
+
+        texturesSubSubFolder.mkdirs();
+
+        File textureFile1 = new File(texturesSubFolder, "texture1.txt");
+        File textureFile1_clashing = new File(texturesSubFolder, "texture1.json");
+        File textureFile3 = new File(texturesSubFolder, "texture3.txt");
+
+        File textureFile4 = new File(texturesSubSubFolder, "texture4.txt");
+
+        writeString(textureFile1, fileContents);
+        writeString(textureFile1_clashing, fileContents);
+        writeString(textureFile3, fileContents);
+        writeString(textureFile4, fileContents);
+
+        GradleRunner runner = GradleRunner.create();
+        runner.forwardOutput();
+        runner.withPluginClasspath();
+        runner.withArguments("assemble");
+        runner.withProjectDir(projectDir);
+        BuildResult result = runner.build();
+
+        String content = Files.readString(getGeneratedResourcesFile("com.onemillionworlds.typedmaterials.Assets.txt").toPath());
+
+
+        String expectedTexturesSection = """
+                Textures/Textures/texture1.json
+                Textures/Textures/texture1.txt
+                Textures/Textures/texture3.txt
+                Textures/Textures/Textures/texture4.txt
                 """;
 
         assertTrue(content.contains(expectedTexturesSection), content);

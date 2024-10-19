@@ -3,7 +3,6 @@
  */
 package com.onemillionworlds;
 
-import com.onemillionworlds.tasks.MaterialFactoryTask;
 import org.gradle.api.Project;
 import org.gradle.api.Plugin;
 import org.gradle.api.tasks.Delete;
@@ -15,6 +14,7 @@ import java.io.File;
 
 public class TypedMaterialsPlugin implements Plugin<Project> {
     public static final String DEFAULT_GENERATED_SOURCES_DIR = "src/main/generated/java";
+    public static final String DEFAULT_GENERATED_RESOURCES_DIR = "src/main/generated/resources";
 
     public void apply(Project project) {
 
