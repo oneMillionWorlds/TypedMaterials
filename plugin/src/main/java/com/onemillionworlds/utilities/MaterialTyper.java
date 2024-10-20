@@ -45,6 +45,8 @@ public class MaterialTyper{
                                      @SuppressWarnings("all")
                                      public class [MATERIAL_NAME] extends Material {
                                      
+                                         public static final String DEF_NAME = "[DEF_NAME]";
+                                     
                                          /**
                                          * Do not use this constructor. Serialization purposes only.
                                          */
@@ -53,7 +55,7 @@ public class MaterialTyper{
                                          }
                                      
                                          public [MATERIAL_NAME](AssetManager contentMan) {
-                                             super(contentMan, "[DEF_NAME]");
+                                             super(contentMan, DEF_NAME);
                                          }
                                      
                                      [CONTENT]
@@ -93,13 +95,14 @@ public class MaterialTyper{
                                      @SuppressWarnings("all")
                                      public class [MATERIAL_NAME]Wrapper{
                                      
+                                         public static final String DEF_NAME = "[DEF_NAME]";
                                          private final Material material;
                                      
                                          public [MATERIAL_NAME]Wrapper(Material material) {
                                              if(material == null){
                                                  throw new IllegalArgumentException("Material cannot be null");
                                              }
-                                             if(!material.getMaterialDef().getAssetName().equals("[DEF_NAME]")){
+                                             if(!material.getMaterialDef().getAssetName().equals(DEF_NAME)){
                                                  throw new IllegalArgumentException("Material is not of type [DEF_NAME] but is " + material.getMaterialDef().getAssetName());
                                              }
                                              this.material = material;

@@ -43,9 +43,7 @@ public class TypedJarMaterials extends DefaultTask{
                 try (ZipInputStream zip = new ZipInputStream(new FileInputStream(file))) {
                     ZipEntry entry;
                     while ((entry = zip.getNextEntry()) != null) {
-                        // Here you can filter for specific resources or types of files
-                        if (entry.getName().endsWith(".j3md")) { // Example filter
-                            // Use a StringBuilder to collect the file content
+                        if (entry.getName().endsWith(".j3md")) {
                             StringBuilder content = new StringBuilder();
                             BufferedReader reader = new BufferedReader(new InputStreamReader(zip));
                             String line;
