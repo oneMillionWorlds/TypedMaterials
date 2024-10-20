@@ -1,5 +1,6 @@
 package com.onemillionworlds.tasks;
 
+import com.onemillionworlds.tasks.assets.AssetsFolder;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -11,7 +12,6 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskAction;
-import org.gradle.internal.impldep.com.google.common.base.Strings;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -24,19 +24,15 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-public class LocalAssetConstants extends DefaultTask{
+public class AssetConstants extends DefaultTask{
 
-    private static final String FLAT_FILE_CONTEXT_CHANGE = "::";
+    public static final String FLAT_FILE_CONTEXT_CHANGE = "::";
     private static final String ASSETS_FILE_NAME = "com.onemillionworlds.typedmaterials.assets.txt";
 
     private static final String classTemplate = """
@@ -69,6 +65,11 @@ public class LocalAssetConstants extends DefaultTask{
     String jarFilterRegex;
 
     /**
+     * If present, use this regex to filter the files within the jars, only those that match will be included
+     */
+    String withinJarFileRegex;
+
+    /**
      * If present, use this sources root to output all the assets as a java class
      */
     File outputSourcesRoot;
@@ -79,7 +80,7 @@ public class LocalAssetConstants extends DefaultTask{
     File outputResourcesRoot;
 
     @TaskAction
-    public void createTypedMaterials() throws IOException{
+    public void createTypedMaterials(){
         AssetsFolder assetsFolder = new AssetsFolder("");
 
         for(File folder : getFileCollectionFromSourceDirs()){
@@ -105,7 +106,7 @@ public class LocalAssetConstants extends DefaultTask{
                 Files.writeString(getDestinationFile().toPath(), fullClass);
             }
             if(getDestinationFlatFile()!=null){
-                String flatFileStringBuilder = FLAT_FILE_CONTEXT_CHANGE+getProject().getName() + "/n" +
+                String flatFileStringBuilder = FLAT_FILE_CONTEXT_CHANGE+getProject().getName() + "\n" +
                         assetsFolder.getFileListingContent();
                 Files.writeString(getDestinationFlatFile().toPath(), flatFileStringBuilder);
             }
@@ -116,12 +117,13 @@ public class LocalAssetConstants extends DefaultTask{
 
     private AssetsFolder searchAllFromJars(String jarFilterRegex){
         Pattern pattern = Pattern.compile(jarFilterRegex);
-        Pattern patternEverythingAfterResources = Pattern.compile(".*/resources/(.*)");
+
+        Pattern withinJarPattern = Pattern.compile(withinJarFileRegex == null ? ".*" : withinJarFileRegex);
+
         Configuration test = getProject().getConfigurations().getByName("runtimeClasspath");
         Set<File> resolve = test.resolve();
 
         AssetsFolder assetsFolder = new AssetsFolder("");
-
         resolve.forEach(file -> {
             if (file.getName().endsWith(".jar") && pattern.matcher(file.getName()).matches()) {
                 String context = file.getName().replace(".jar", "");
@@ -129,13 +131,17 @@ public class LocalAssetConstants extends DefaultTask{
                 try (ZipInputStream zip = new ZipInputStream(new FileInputStream(file))) {
                     ZipEntry entry;
                     while ((entry = zip.getNextEntry()) != null) {
-                        if (entry.getName().contains("/resources/")) {
-                            Matcher matcher = patternEverythingAfterResources.matcher(entry.getName());
-                            if(matcher.matches()){
-                                String path = matcher.group(1);
-                                assetsFolder.addAssetFromFullRelativePath(path, context);
-                            }
+                        if(entry.isDirectory()){
+                            continue;
                         }
+                        if(entry.getName().endsWith(".class")){
+                            continue;
+                        }
+                        if(!withinJarPattern.matcher(entry.getName()).matches()){
+                            continue;
+                        }
+
+                        assetsFolder.addAssetFromFullRelativePath(entry.getName(), context);
                         zip.closeEntry();
                     }
                 } catch (Exception e) {
@@ -146,13 +152,19 @@ public class LocalAssetConstants extends DefaultTask{
         return assetsFolder;
     }
 
-    private AssetsFolder searchForAllFiles(File file, String currentPath, String context) throws IOException{
+    private AssetsFolder searchForAllFiles(File file, String currentPath, String context){
 
         AssetsFolder assetsFolder = new AssetsFolder(currentPath);
 
-        for( File fileToProcess : Arrays.stream(file.listFiles()).sorted().toList()){
+        File[] files = file.listFiles();
+
+        if(files==null){
+            return assetsFolder;
+        }
+
+        for( File fileToProcess : Arrays.stream(files).sorted().toList()){
             if (fileToProcess.isFile()){
-                assetsFolder.addAsset(new AssetItem(fileToProcess.getName(), context));
+                assetsFolder.addAsset(new AssetsFolder.AssetItem(fileToProcess.getName(), context));
             }else{
                 AssetsFolder subFolder = searchForAllFiles(fileToProcess, currentPath + (currentPath.isBlank()?"":"/") + fileToProcess.getName(), context);
                 assetsFolder.addSubfolder(fileToProcess.getName(), subFolder);
@@ -182,6 +194,22 @@ public class LocalAssetConstants extends DefaultTask{
     @Input
     public String getFullyQualifiedAssetsClass(){
         return fullyQualifiedAssetsClass;
+    }
+
+    @Optional
+    @Input
+    public String getJarFilterRegex(){
+        return jarFilterRegex;
+    }
+
+    @Optional
+    @Input
+    public String getWithinJarFileRegex(){
+        return withinJarFileRegex;
+    }
+
+    public void setWithinJarFileRegex(String withinJarFileRegex){
+        this.withinJarFileRegex = withinJarFileRegex;
     }
 
     /*
@@ -241,7 +269,7 @@ public class LocalAssetConstants extends DefaultTask{
     }
 
     private List<String> loadAllLibraryAssetFiles(){
-        ClassLoader classLoader = LocalAssetConstants.class.getClassLoader();
+        ClassLoader classLoader = AssetConstants.class.getClassLoader();
 
         List<String> content = new ArrayList<>();
         try {
@@ -265,154 +293,9 @@ public class LocalAssetConstants extends DefaultTask{
         return content;
     }
 
-    private static class AssetsFolder{
-        String assetFolderPath;
-
-        Map<String, AssetsFolder> subfolders = new LinkedHashMap<>();
-
-        List<AssetItem> assetsOnThisLevel = new ArrayList<>();
-
-        public AssetsFolder(String assetFolderPath){
-            this.assetFolderPath = assetFolderPath;
-        }
-
-        public String getJavaClassContent(int indentLevel, List<String> parentFolders){
-            StringBuilder content = new StringBuilder();
-
-            Set<String> usedSimpleNames = new HashSet<>();
-
-            if(indentLevel>1){
-                content
-                        .append(" ".repeat(indentLevel * 4))
-                        .append("public static final String FOLDER_PATH")
-                        .append(" = \"").append(assetFolderPath).append("\";\n");
-                usedSimpleNames.add("FOLDER_PATH");
-            }
-            for(AssetItem asset : assetsOnThisLevel){
-                String complexName = toUpperSnakeCase(makeValidJavaIdentifier(asset.name));
-                String simpleName = toUpperSnakeCase(makeValidJavaIdentifier(asset.name.replaceAll("\\..*", "")));
-                String nameToUse;
-                if (!usedSimpleNames.contains(simpleName)){
-                    nameToUse = simpleName;
-                    usedSimpleNames.add(simpleName);
-                }else{
-                    nameToUse = complexName;
-                }
-
-                content
-                        .append(" ".repeat(indentLevel*4))
-                        .append("public static final String ").append(nameToUse)
-                        .append(" = \"").append(assetFolderPath + "/"+asset.name).append("\";\n");
-            }
-
-            if(indentLevel>1){
-                content.append("\n")
-                        .append(" ".repeat(indentLevel * 4)).append("public static String child(String child){\n")
-                        .append(" ".repeat(indentLevel * 4)).append("    return FOLDER_PATH + \"/\" + child;\n")
-                        .append(" ".repeat(indentLevel * 4)).append("}\n");
-            }
-
-            for(Map.Entry<String, AssetsFolder> subfolder : subfolders.entrySet()){
-                List<String> parentFoldersForChild = new ArrayList<>(parentFolders);
-                parentFoldersForChild.add(subfolder.getKey());
-                content
-                        .append(" ".repeat(indentLevel*4))
-                        .append("public static class ").append(makeValidJavaClass(subfolder.getKey(), parentFolders))
-                        .append("{\n")
-                        .append(subfolder.getValue().getJavaClassContent(indentLevel+1, parentFoldersForChild))
-                        .append(" ".repeat(indentLevel*4))
-                        .append("}\n");
-            }
-
-            return content.toString();
-        }
-
-        /**
-         * This is just a list of all the files, which is put into the resources folder to be pickd up in other modules
-         * (if desired) to create a single super assets class
-         */
-        public StringBuilder getFileListingContent(){
-            StringBuilder content = new StringBuilder();
-            for(AssetItem assetOnThisLevel : assetsOnThisLevel){
-                content.append(assetFolderPath).append("/").append(assetOnThisLevel.name).append("\n");
-            }
-            for(AssetsFolder subfolder : subfolders.values()){
-                content.append(subfolder.getFileListingContent());
-            }
-            return content;
-        }
-
-        public void addAsset(AssetItem asset){
-            assetsOnThisLevel.add(asset);
-        }
-
-        public void addAssetFromFullRelativePath(String fullRelativePath, String context){
-            if(assetFolderPath.contains("/")){
-                String subfolder = fullRelativePath.substring(0, fullRelativePath.indexOf("/"));
-                String assetName = fullRelativePath.substring(fullRelativePath.indexOf("/")+1);
-                if(subfolders.containsKey(subfolder)){
-                    subfolders.get(subfolder).addAsset(new AssetItem(assetName, context));
-                }else{
-                    AssetsFolder newFolder = new AssetsFolder(assetName);
-                    newFolder.addAsset(new AssetItem(assetName, context));
-                    subfolders.put(subfolder, newFolder);
-                }
-            }else {
-                addAsset(new AssetItem(assetFolderPath, context));
-            }
-        }
-
-        public void addSubfolder(String subfolder, AssetsFolder assetsFolder){
-            subfolders.put(subfolder, assetsFolder);
-        }
-
-        private String makeValidJavaClass(String name, List<String> parentFolders){
-            String validIdentifier = makeValidJavaIdentifier(name);
-            int numberOfParentsWithSameName = (int) parentFolders.stream()
-                    .map(this::makeValidJavaIdentifier)
-                    .filter(folder -> folder.equals(validIdentifier)).count();
-            String numericSuffix = numberOfParentsWithSameName == 0 ? "" : "_"+(numberOfParentsWithSameName+1);
-
-            String validIdentifierWithSuffix = makeValidJavaIdentifier(name) + numericSuffix;
-            return validIdentifierWithSuffix.substring(0, 1).toUpperCase() + validIdentifierWithSuffix.substring(1);
-        }
-
-        private String makeValidJavaIdentifier(String name){
-            String corrected = name.replaceAll("[^a-zA-Z0-9]", "_");
-
-            if (Character.isDigit(corrected.charAt(0))){
-                corrected = "_" + corrected;
-            }
-            return corrected;
-        }
-
-        private String toUpperSnakeCase(String name){
-            return name.replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase();
-        }
-
-        public void addAll(AssetsFolder assetsFolder){
-            assetsOnThisLevel.addAll(assetsFolder.assetsOnThisLevel);
-            for(Map.Entry<String, AssetsFolder> subfolder : assetsFolder.subfolders.entrySet()){
-                if (subfolders.containsKey(subfolder.getKey())){
-                    subfolders.get(subfolder.getKey()).addAll(subfolder.getValue());
-                }else{
-                    subfolders.put(subfolder.getKey(), subfolder.getValue());
-                }
-            }
-        }
+    public void setJarFilterRegex(String jarFilterRegex){
+        this.jarFilterRegex = jarFilterRegex;
     }
 
-    private static class AssetItem{
-        /**
-         * This is which library it came from, used only in a comment. Can be null, in which case it is not included
-         */
-        String context;
-        String name;
-
-        public AssetItem(String name, String context){
-            this.context = context;
-            this.name = name;
-        }
-    }
 
 }

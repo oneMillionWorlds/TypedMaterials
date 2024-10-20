@@ -239,4 +239,100 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
 
         assertTrue(content.contains(expectedTexturesSection), content);
     }
+
+    /**
+     * In java a class Foo can't contain a child class also called Foo. This test
+     * ensures those aren't generated
+     */
+    @Test
+    void jarAssetConstantsFlatFileListing() throws IOException{
+        writeString(getSettingsFile(), "");
+        writeString(getBuildFile(),
+                """
+                    plugins {
+                      id('java')
+                      id('com.onemillionworlds.typed-materials')
+                    };
+                    repositories {
+                        mavenCentral()
+                    }
+                    dependencies {
+                         implementation 'org.jmonkeyengine:jme3-core:3.6.1-stable'
+                    }
+                    typedMaterials{
+                      jarAssetsFile(".*jme3-core.*")
+                    }
+                    """);
+
+        // Run the build
+        GradleRunner runner = GradleRunner.create();
+        runner.forwardOutput();
+        runner.withPluginClasspath();
+        runner.withArguments("assemble","--stacktrace");
+        runner.withProjectDir(projectDir);
+        runner.build();
+
+        String content = Files.readString(getGeneratedResourcesFile("com.onemillionworlds.typedmaterials.Assets.txt").toPath());
+
+        String expectedAssetsSection = """
+                ::jme3-core-3.6.1-stable
+                joystick-mapping.properties
+                META-INF/MANIFEST.MF
+                Interface/Fonts/Default.fnt
+                Interface/Fonts/Console.png
+                Interface/Fonts/Console.fnt
+                Interface/Fonts/Default.png
+                """;
+
+        assertTrue(content.contains(expectedAssetsSection), content);
+
+    }
+
+
+    /**
+     * In java a class Foo can't contain a child class also called Foo. This test
+     * ensures those aren't generated
+     */
+    @Test
+    void jarAssetConstantsFlatFileListingWithFilter() throws IOException{
+        writeString(getSettingsFile(), "");
+        writeString(getBuildFile(),
+                """
+                    plugins {
+                      id('java')
+                      id('com.onemillionworlds.typed-materials')
+                    };
+                    repositories {
+                        mavenCentral()
+                    }
+                    dependencies {
+                         implementation 'org.jmonkeyengine:jme3-core:3.6.1-stable'
+                    }
+                    typedMaterials{
+                      jarAssetsFile(".*jme3-core.*", ".*/Textures/.*")
+                    }
+                    """);
+
+        // Run the build
+        GradleRunner runner = GradleRunner.create();
+        runner.forwardOutput();
+        runner.withPluginClasspath();
+        runner.withArguments("assemble","--stacktrace");
+        runner.withProjectDir(projectDir);
+        runner.build();
+
+        String content = Files.readString(getGeneratedResourcesFile("com.onemillionworlds.typedmaterials.Assets.txt").toPath());
+
+        String expectedAssetsSection = """
+                ::jme3-core-3.6.1-stable
+                Common/Textures/MissingTexture.png
+                Common/Textures/integrateBRDF.ktx
+                Common/Textures/MissingMaterial.png
+                Common/Textures/dot.png
+                Common/Textures/MissingModel.png
+                """;
+
+        assertTrue(content.contains(expectedAssetsSection), content);
+
+    }
 }

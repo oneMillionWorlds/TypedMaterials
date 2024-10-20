@@ -1,7 +1,7 @@
 package com.onemillionworlds.configuration;
 
 import com.onemillionworlds.TypedMaterialsPlugin;
-import com.onemillionworlds.tasks.LocalAssetConstants;
+import com.onemillionworlds.tasks.AssetConstants;
 import com.onemillionworlds.tasks.MaterialFactoryTask;
 import com.onemillionworlds.tasks.TypedJarMaterials;
 import com.onemillionworlds.tasks.TypedLocalMaterials;
@@ -70,7 +70,7 @@ public class TypedMaterialsExtension{
      * @param fullyQualifiedAssetsClass the fully qualified name of the class will be generated to contains the asset paths. E.g. "com.mygame.assets.Assets"
      */
     public void assetsConstant(String fullyQualifiedAssetsClass){
-        project.getTasks().create("assetConstants", LocalAssetConstants.class, task -> {
+        project.getTasks().create("assetConstants", AssetConstants.class, task -> {
             task.setGroup("typedMaterials");
             task.setFullyQualifiedAssetsClass(fullyQualifiedAssetsClass);
             task.setOutputSourcesRoot(project.file(generatedSourcesDir));
@@ -91,9 +91,45 @@ public class TypedMaterialsExtension{
      * </p>
      */
     public void assetsFile(){
-        project.getTasks().create("assetsFile", LocalAssetConstants.class, task -> {
+        project.getTasks().create("assetsFile", AssetConstants.class, task -> {
             task.setGroup("typedMaterials");
             task.setOutputResourcesRoot(project.file(generatedResourcesDir));
+        });
+        project.getTasks().named("processResources").configure(processResources -> processResources.dependsOn("assetsFile"));
+    }
+
+    /**
+     * Registers a task to search for assets in the resources directory(s) of a jar and create a flat file containing the
+     * asset locations.
+     * <p>
+     *     It will also include any local assets
+     * </p>
+     * <p>
+     *     This file is created in the resources root and is named com.onemillionworlds.typedmaterials.assets.txt. This
+     *     enforced naming is to allow the jarAssetConstant task to find the file later.
+     * </p>
+     */
+    public void jarAssetsFile(String jarFilterRegex){
+        jarAssetsFile(jarFilterRegex, ".*");
+    }
+
+    /**
+     * Registers a task to search for assets in the resources directory(s) of a jar and create a flat file containing the
+     * asset locations.
+     * <p>
+     *     It will also include any local assets
+     * </p>
+     * <p>
+     *     This file is created in the resources root and is named com.onemillionworlds.typedmaterials.assets.txt. This
+     *     enforced naming is to allow the jarAssetConstant task to find the file later.
+     * </p>
+     */
+    public void jarAssetsFile(String jarFilterRegex, String fileRegex){
+        project.getTasks().create("assetsFile", AssetConstants.class, task -> {
+            task.setGroup("typedMaterials");
+            task.setOutputResourcesRoot(project.file(generatedResourcesDir));
+            task.setJarFilterRegex(jarFilterRegex);
+            task.setWithinJarFileRegex(fileRegex);
         });
         project.getTasks().named("processResources").configure(processResources -> processResources.dependsOn("assetsFile"));
     }
