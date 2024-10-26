@@ -11,6 +11,9 @@ import java.util.Objects;
 import java.util.Set;
 
 public class AssetsFolder{
+    /**
+     * This is the FULL path to the folder, from the root, not just the name of this folder
+     */
     String assetFolderPath;
 
     Map<String, AssetsFolder> subfolders = new LinkedHashMap<>();
@@ -47,13 +50,13 @@ public class AssetsFolder{
             if(asset.context!=null){
                 content
                         .append(" ".repeat(indentLevel*4))
-                        .append("/* ").append("\n");
+                        .append("/*").append("\n");
                 content
                         .append(" ".repeat(indentLevel*4))
                         .append(" * ").append(asset.context).append("\n");
                 content
                         .append(" ".repeat(indentLevel*4))
-                        .append("*/ ").append("\n");
+                        .append(" */").append("\n");
             }
 
             content
@@ -90,14 +93,14 @@ public class AssetsFolder{
      */
     public StringBuilder getFileListingContent(){
         ContextProvider contextProvider = new ContextProvider();
-        return getFileListingContent(List.of(), contextProvider);
+        return getFileListingContent(contextProvider);
     }
 
     /**
      * This is just a list of all the files, which is put into the resources folder to be pickd up in other modules
      * (if desired) to create a single super assets class
      */
-    public StringBuilder getFileListingContent(List<String> parentFolders, ContextProvider contextProvider){
+    public StringBuilder getFileListingContent(ContextProvider contextProvider){
         String context = contextProvider.getContext();
         StringBuilder content = new StringBuilder();
         for(AssetItem assetOnThisLevel : assetsOnThisLevel){
@@ -106,22 +109,14 @@ public class AssetsFolder{
                 contextProvider.setContext(context); //this allows other bits of the build to keep the context
                 content.append(AssetConstants.FLAT_FILE_CONTEXT_CHANGE).append(context).append("\n");
             }
-            for(String parentFolder : parentFolders){
-                content.append(parentFolder).append("/");
-            }
             if(!assetFolderPath.isEmpty()){
                 content.append(assetFolderPath).append("/");
             }
             content.append(assetOnThisLevel.name).append("\n");
         }
 
-        List<String> parentFoldersForChildren = new ArrayList<>(parentFolders);
-        if(!assetFolderPath.isEmpty()){
-            parentFoldersForChildren.add(assetFolderPath);
-        }
-
         for(AssetsFolder subfolder : subfolders.values()){
-            content.append(subfolder.getFileListingContent(parentFoldersForChildren, contextProvider));
+            content.append(subfolder.getFileListingContent(contextProvider));
         }
         return content;
     }
@@ -141,7 +136,7 @@ public class AssetsFolder{
             String subfolder = fullRelativePath.substring(0, fullRelativePath.indexOf("/"));
             String assetName = fullRelativePath.substring(fullRelativePath.indexOf("/")+1);
 
-            subfolders.computeIfAbsent(subfolder, AssetsFolder::new).addAssetFromFullRelativePath(assetName, context);
+            subfolders.computeIfAbsent(subfolder, (sf) -> new AssetsFolder((this.assetFolderPath.isBlank()?"":this.assetFolderPath+"/") + subfolder)).addAssetFromFullRelativePath(assetName, context);
         }else {
             addAsset(new AssetItem(fullRelativePath, context));
         }
@@ -182,6 +177,17 @@ public class AssetsFolder{
                 subfolders.get(subfolder.getKey()).addAll(subfolder.getValue());
             }else{
                 subfolders.put(subfolder.getKey(), subfolder.getValue());
+            }
+        }
+    }
+
+    public void addAssetsFromFlatFile(List<String> lines){
+        String context = null;
+        for(String line : lines){
+            if(line.startsWith(AssetConstants.FLAT_FILE_CONTEXT_CHANGE)){
+                context = line.substring(AssetConstants.FLAT_FILE_CONTEXT_CHANGE.length());
+            }else{
+                addAssetFromFullRelativePath(line, context);
             }
         }
     }

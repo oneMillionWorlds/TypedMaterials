@@ -203,9 +203,9 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
 
         String fileContents = "This is just a test";
         File resourcesRoot = localResourcesRoot_resourcesStyle();
-        File texturesRoot = new File(resourcesRoot, "Textures");
-        File texturesSubFolder = new File(texturesRoot, "Textures");
-        File texturesSubSubFolder = new File(texturesSubFolder, "Textures");
+        File texturesRoot = new File(resourcesRoot, "A");
+        File texturesSubFolder = new File(texturesRoot, "B");
+        File texturesSubSubFolder = new File(texturesSubFolder, "C");
 
         texturesSubSubFolder.mkdirs();
 
@@ -229,12 +229,11 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
 
         String content = Files.readString(getGeneratedResourcesFile("com.onemillionworlds.typedmaterials.Assets.txt").toPath());
 
-
         String expectedTexturesSection = """
-                Textures/Textures/texture1.json
-                Textures/Textures/texture1.txt
-                Textures/Textures/texture3.txt
-                Textures/Textures/Textures/texture4.txt
+                A/B/texture1.json
+                A/B/texture1.txt
+                A/B/texture3.txt
+                A/B/C/texture4.txt
                 """;
 
         assertTrue(content.contains(expectedTexturesSection), content);

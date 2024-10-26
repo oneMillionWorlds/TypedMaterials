@@ -35,7 +35,9 @@ public class TypedMaterialsPlugin implements Plugin<Project> {
             task.delete(project.file(extension.getGeneratedSourcesDir()));
         });
 
-        project.getTasks().named("clean").configure(compileJava -> compileJava.dependsOn("cleanTypedMaterials"));
+        if(project.getTasks().findByName("clean") != null){
+            project.getTasks().named("clean").configure(compileJava -> compileJava.dependsOn("cleanTypedMaterials"));
+        }
 
     }
 

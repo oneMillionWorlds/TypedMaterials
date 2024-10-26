@@ -15,6 +15,10 @@ public class FunctionalTestBase{
         return new File(projectDir, "build.gradle");
     }
 
+    protected File getBuildFile(String moduleName) {
+        return new File(projectDir, moduleName + "/build.gradle");
+    }
+
     protected File getSettingsFile() {
         return new File(projectDir, "settings.gradle");
     }
@@ -41,6 +45,12 @@ public class FunctionalTestBase{
         return directory;
     }
 
+    protected File localResourcesRoot_resourcesStyle(String moduleName){
+        File directory = new File(projectDir,  moduleName + "/src/main/resources");
+        directory.mkdirs();
+        return directory;
+    }
+
     protected File localMaterialsRoot_resourcesStyle() {
         File directory = new File(localResourcesRoot_resourcesStyle(),  "/MatDefs");
         directory.mkdirs();
@@ -54,6 +64,7 @@ public class FunctionalTestBase{
     }
 
     protected void writeString(File file, String string) throws IOException{
+        file.getParentFile().mkdirs();
         try (Writer writer = new FileWriter(file)) {
             writer.write(string);
         }

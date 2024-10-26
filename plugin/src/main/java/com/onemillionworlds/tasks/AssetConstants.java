@@ -33,7 +33,7 @@ import java.util.zip.ZipInputStream;
 public class AssetConstants extends DefaultTask{
 
     public static final String FLAT_FILE_CONTEXT_CHANGE = "::";
-    private static final String ASSETS_FILE_NAME = "com.onemillionworlds.typedmaterials.assets.txt";
+    public static final String ASSETS_FILE_NAME = "com_onemillionworlds_typedmaterials_assets.txt";
 
     private static final String classTemplate = """
                                      package [PACKAGE];
@@ -79,6 +79,11 @@ public class AssetConstants extends DefaultTask{
      */
     File outputResourcesRoot;
 
+    /**
+     * If present, will use these files
+     */
+    FileCollection assetFlatFiles;
+
     @TaskAction
     public void createTypedMaterials(){
         AssetsFolder assetsFolder = new AssetsFolder("");
@@ -87,7 +92,7 @@ public class AssetConstants extends DefaultTask{
             assetsFolder.addAll(searchForAllFiles(folder, "", null));
         }
 
-        AssetsFolder resourcesFolderFast = searchAllFromResourceFlatFiles();
+        AssetsFolder resourcesFolderFast = searchAllFromSuppliedFlatFiles();
         assetsFolder.addAll(resourcesFolderFast);
 
         if(jarFilterRegex!=null && !jarFilterRegex.isBlank()){
@@ -174,19 +179,19 @@ public class AssetConstants extends DefaultTask{
         return assetsFolder;
     }
 
-    private AssetsFolder searchAllFromResourceFlatFiles(){
+    private AssetsFolder searchAllFromSuppliedFlatFiles(){
         AssetsFolder assetsFolder = new AssetsFolder("");
 
-        List<String> allLibraryAssetFiles = loadAllLibraryAssetFiles();
-        String context = null;
-        for(String asset : allLibraryAssetFiles){
-            if(asset.startsWith(FLAT_FILE_CONTEXT_CHANGE)){
-                context = asset.substring(FLAT_FILE_CONTEXT_CHANGE.length());
-                continue;
-            }
-            assetsFolder.addAssetFromFullRelativePath(asset, context);
+        if(assetFlatFiles != null){
+            assetFlatFiles.forEach(file -> {
+                try {
+                    List<String> lines = Files.readAllLines(file.toPath());
+                    assetsFolder.addAssetsFromFlatFile(lines);
+                } catch (IOException e) {
+                    throw new RuntimeException("Error reading flat file: " + file + e.getMessage(), e);
+                }
+            });
         }
-
         return assetsFolder;
     }
 
@@ -212,20 +217,22 @@ public class AssetConstants extends DefaultTask{
         this.withinJarFileRegex = withinJarFileRegex;
     }
 
-    /*
-    @InputFiles
-    public Collection<File> getFoldersToProcess(){
-        SourceSetContainer sourceSets = (SourceSetContainer) getProject().getProperties().get("sourceSets");
-        SourceSet mainSourceSet = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
-        return mainSourceSet.getResources().getSrcDirs();
-    }*/
-
     @InputFiles
     public FileCollection getFileCollectionFromSourceDirs() {
         Project project = getProject();
         SourceSetContainer sourceSets = (SourceSetContainer) project.getProperties().get("sourceSets");
         SourceSet mainSourceSet = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
         return project.files(mainSourceSet.getResources().getSrcDirs());
+    }
+
+    @InputFiles
+    @Optional
+    public FileCollection getAssetFlatFiles() {
+        return assetFlatFiles;
+    }
+
+    public void setAssetFlatFiles(FileCollection assetFlatFiles) {
+        this.assetFlatFiles = assetFlatFiles;
     }
 
     @Optional
@@ -266,31 +273,6 @@ public class AssetConstants extends DefaultTask{
     private String getClassName(){
         return fullyQualifiedAssetsClass
                 .replaceAll(".*\\.", "");
-    }
-
-    private List<String> loadAllLibraryAssetFiles(){
-        ClassLoader classLoader = AssetConstants.class.getClassLoader();
-
-        List<String> content = new ArrayList<>();
-        try {
-            Enumeration<URL> resources = classLoader.getResources(ASSETS_FILE_NAME);
-            while (resources.hasMoreElements()) {
-                URL resourceUrl = resources.nextElement();
-                System.out.println("Found resource at: " + resourceUrl);
-
-                try (InputStream inputStream = resourceUrl.openStream();
-                     BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        content.add(line);
-                    }
-                }
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Error reading assets file: " + e.getMessage(), e);
-        }
-        return content;
     }
 
     public void setJarFilterRegex(String jarFilterRegex){

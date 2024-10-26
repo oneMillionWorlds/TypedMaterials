@@ -8,6 +8,9 @@ import com.onemillionworlds.tasks.TypedLocalMaterials;
 import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.SourceSetContainer;
+
+import java.io.File;
 
 @SuppressWarnings("unused")
 public class TypedMaterialsExtension{
@@ -76,6 +79,7 @@ public class TypedMaterialsExtension{
             task.setOutputSourcesRoot(project.file(generatedSourcesDir));
         });
         project.getTasks().named("compileJava").configure(compileJava -> compileJava.dependsOn("assetConstants"));
+        addGeneratedSourcesToMainSourceSet();
     }
 
     /**
@@ -96,6 +100,7 @@ public class TypedMaterialsExtension{
             task.setOutputResourcesRoot(project.file(generatedResourcesDir));
         });
         project.getTasks().named("processResources").configure(processResources -> processResources.dependsOn("assetsFile"));
+        addGeneratedResourcesToMainSourceSet();
     }
 
     /**
@@ -111,6 +116,7 @@ public class TypedMaterialsExtension{
      */
     public void jarAssetsFile(String jarFilterRegex){
         jarAssetsFile(jarFilterRegex, ".*");
+
     }
 
     /**
@@ -132,6 +138,7 @@ public class TypedMaterialsExtension{
             task.setWithinJarFileRegex(fileRegex);
         });
         project.getTasks().named("processResources").configure(processResources -> processResources.dependsOn("assetsFile"));
+        addGeneratedResourcesToMainSourceSet();
     }
 
     /**
@@ -150,6 +157,7 @@ public class TypedMaterialsExtension{
         });
         setUpMaterialFactoryTaskIfNotPresent();
         project.getTasks().named("materialFactory").configure(compileJava -> compileJava.dependsOn(taskName));
+        addGeneratedSourcesToMainSourceSet();
     }
 
     /**
@@ -179,6 +187,7 @@ public class TypedMaterialsExtension{
         });
         setUpMaterialFactoryTaskIfNotPresent();
         project.getTasks().named("materialFactory").configure(compileJava -> compileJava.dependsOn("localTypedMaterials"));
+        addGeneratedSourcesToMainSourceSet();
     }
 
     /**
@@ -202,5 +211,23 @@ public class TypedMaterialsExtension{
             });
             project.getTasks().named("compileJava").configure(compileJava -> compileJava.dependsOn("materialFactory"));
         }
+    }
+
+    private void addGeneratedSourcesToMainSourceSet(){
+        project.getExtensions().getByType(SourceSetContainer.class).named("main", sourceSet -> {
+            File generatedDir = project.file(generatedSourcesDir.get());
+            if (!sourceSet.getJava().getSrcDirs().contains(generatedDir)) {
+                sourceSet.getJava().srcDir(generatedDir);
+            }
+        });
+    }
+
+    private void addGeneratedResourcesToMainSourceSet(){
+        project.getExtensions().getByType(SourceSetContainer.class).named("main", sourceSet -> {
+            File generatedDir = project.file(generatedResourcesDir.get());
+            if (!sourceSet.getResources().getSrcDirs().contains(generatedDir)) {
+                sourceSet.getResources().srcDir(generatedDir);
+            }
+        });
     }
 }
