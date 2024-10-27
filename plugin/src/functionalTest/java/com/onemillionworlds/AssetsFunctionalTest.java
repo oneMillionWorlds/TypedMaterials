@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AssetsFunctionalTest extends FunctionalTestBase{
@@ -59,7 +60,9 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
         runner.withProjectDir(projectDir);
         BuildResult result = runner.build();
 
-        String content = Files.readString(getGeneratedJavaFile("com/myproject/assets/Assets.java").toPath());
+        File assetsFile = getGeneratedJavaFile("com/myproject/assets/Assets.java");
+
+        String content = Files.readString(assetsFile.toPath());
 
         String expectedMaterialsSection = """
                     public static class MatDefs{
@@ -95,6 +98,15 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
 
         assertTrue(content.contains(expectedMaterialsSection), content);
         assertTrue(content.contains(expectedTexturesSection), content);
+
+        GradleRunner runnerClean = GradleRunner.create();
+        runnerClean.forwardOutput();
+        runnerClean.withPluginClasspath();
+        runnerClean.withArguments("clean", "--stacktrace");
+        runnerClean.withProjectDir(projectDir);
+        BuildResult result2 = runnerClean.build();
+
+        assertFalse(assetsFile.exists());
     }
 
     /**
@@ -320,7 +332,9 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
         runner.withProjectDir(projectDir);
         runner.build();
 
-        String content = Files.readString(getGeneratedResourcesFile("com_onemillionworlds_typedmaterials_assets.txt").toPath());
+        File assetsFile = getGeneratedResourcesFile("com_onemillionworlds_typedmaterials_assets.txt");
+
+        String content = Files.readString(assetsFile.toPath());
 
         String expectedAssetsSection = """
                 ::jme3-core-3.6.1-stable
@@ -333,5 +347,13 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
 
         assertTrue(content.contains(expectedAssetsSection), content);
 
+        GradleRunner runnerClean = GradleRunner.create();
+        runnerClean.forwardOutput();
+        runnerClean.withPluginClasspath();
+        runnerClean.withArguments("clean", "--stacktrace");
+        runnerClean.withProjectDir(projectDir);
+        BuildResult result2 = runnerClean.build();
+
+        assertFalse(assetsFile.exists());
     }
 }

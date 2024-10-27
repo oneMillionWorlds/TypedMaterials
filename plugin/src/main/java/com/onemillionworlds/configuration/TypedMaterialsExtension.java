@@ -192,10 +192,13 @@ public class TypedMaterialsExtension{
 
     /**
      * The directory where the generated sources will be placed relative to the module root.
-     * Default is "src/main/generated/java"
      */
     public Property<String> getGeneratedSourcesDir(){
         return generatedSourcesDir;
+    }
+
+    public Property<String> getGeneratedResourcesDir(){
+        return generatedResourcesDir;
     }
 
     public Property<String> getMaterialFactoryClass(){
