@@ -103,14 +103,14 @@ public class ComplexMultimoduleAssetsFunctionalTest extends FunctionalTestBase{
                         "${buildDir}/typedMaterials/jmeMaterials/com_onemillionworlds_typedmaterials_assets.txt",
                         "${buildDir}/typedMaterials/localMaterials/com_onemillionworlds_typedmaterials_assets.txt")
                         fullyQualifiedAssetsClass = 'com.myproject.assets.Assets'
-                        outputSourcesRoot = file("${projectDir}/src/main/generated/java")
+                        outputSourcesRoot = file("${projectDir}/src/main/generatedtypedmaterials/java")
                     }
                     
                     tasks.named('compileJava') {
                         dependsOn 'generateAssetsConstant'
                     }
                     
-                    sourceSets.main.java.srcDirs += 'src/main/generated/java'
+                    sourceSets.main.java.srcDirs += 'src/main/generatedtypedmaterials/java'
                     
                     """);
 

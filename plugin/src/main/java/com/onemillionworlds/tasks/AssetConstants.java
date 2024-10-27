@@ -13,17 +13,11 @@ import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskAction;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -222,7 +216,13 @@ public class AssetConstants extends DefaultTask{
         Project project = getProject();
         SourceSetContainer sourceSets = (SourceSetContainer) project.getProperties().get("sourceSets");
         SourceSet mainSourceSet = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
-        return project.files(mainSourceSet.getResources().getSrcDirs());
+        FileCollection resources = project.files(mainSourceSet.getResources().getSrcDirs());
+
+        if(outputResourcesRoot == null){
+            return resources;
+        }
+        // Exclude the generated asset file to avoid task re-execution issues
+        return resources.filter(file -> !file.getAbsolutePath().equals(outputResourcesRoot.getAbsolutePath()));
     }
 
     @InputFiles

@@ -24,11 +24,11 @@ public class FunctionalTestBase{
     }
 
     protected File getGeneratedJavaFilesRoot() {
-        return new File(projectDir,  "src/main/generated/java");
+        return new File(projectDir,  "src/main/generatedtypedmaterials/java");
     }
 
     protected File getGeneratedResourcesFilesRoot() {
-        return new File(projectDir,  "src/main/generated/resources");
+        return new File(projectDir,  "src/main/generatedtypedmaterials/resources");
     }
 
     protected File getGeneratedJavaFile(String pathRelativeToRoot) {

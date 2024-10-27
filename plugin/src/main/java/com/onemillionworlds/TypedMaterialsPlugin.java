@@ -13,8 +13,8 @@ import  com.onemillionworlds.configuration.TypedMaterialsExtension;
 import java.io.File;
 
 public class TypedMaterialsPlugin implements Plugin<Project> {
-    public static final String DEFAULT_GENERATED_SOURCES_DIR = "src/main/generated/java";
-    public static final String DEFAULT_GENERATED_RESOURCES_DIR = "src/main/generated/resources";
+    public static final String DEFAULT_GENERATED_SOURCES_DIR = "src/main/generatedtypedmaterials/java";
+    public static final String DEFAULT_GENERATED_RESOURCES_DIR = "src/main/generatedtypedmaterials/resources";
 
     public void apply(Project project) {
 
