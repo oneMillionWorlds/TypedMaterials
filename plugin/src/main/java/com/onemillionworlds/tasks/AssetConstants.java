@@ -182,7 +182,7 @@ public class AssetConstants extends DefaultTask{
                     List<String> lines = Files.readAllLines(file.toPath());
                     assetsFolder.addAssetsFromFlatFile(lines);
                 } catch (IOException e) {
-                    throw new RuntimeException("Error reading flat file: " + file + e.getMessage(), e);
+                    throw new RuntimeException("Error reading flat file: " + file, e);
                 }
             });
         }
