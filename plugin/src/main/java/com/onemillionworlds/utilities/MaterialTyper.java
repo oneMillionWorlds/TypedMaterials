@@ -129,6 +129,16 @@ public class MaterialTyper{
                                              [CONTENT];
                                         }""";
 
+    private static final String clearParamMethodTemplate = """
+                                       public void clear[PARAMETER_NAME]Param(){
+                                           clearParam("[PARAMETER_NAME]");
+                                       }""";
+
+    private static final String clearParamMethodTemplateWrapper = """
+                                       public void clear[PARAMETER_NAME]Param(){
+                                           material.clearParam("[PARAMETER_NAME]");
+                                       }""";
+
     private static final Pattern extractMaterialParameters = Pattern.compile("MaterialParameters *\\{*([^}]*)}");
 
     private static final Pattern commentLine = Pattern.compile("^ *//(.*)");
@@ -254,9 +264,14 @@ public class MaterialTyper{
             String setTemplate = materialParameterMetadata.setTemplate;
             String getTemplate = materialParameterMetadata.getTemplate;
 
+            String clearParamTemplate;
+
             if(wrapper){
                 setTemplate = "material." + setTemplate;
                 getTemplate = getTemplate.replace("return ", "return material.");
+                clearParamTemplate = clearParamMethodTemplateWrapper;
+            }else{
+                clearParamTemplate = clearParamMethodTemplate;
             }
 
             String setMethod = setMethodTemplate
@@ -271,6 +286,8 @@ public class MaterialTyper{
                     .replace("[PARAMETER_NAME]", parameter.name())
                     .replace("[PARAMETER_NAME_LOWER_CAMEL_CASE]", toLowerCamlCase(parameter.name()));
 
+            String clearParamMethod = clearParamTemplate.replace("[PARAMETER_NAME]", parameter.name());
+
             Optional<String> commentJavaReady = parameter.comment().map(MaterialTyper::formatCommentSectionForJava );
 
             commentJavaReady.ifPresent(c -> content.append("/**\n").append(c).append("\n */\n"));
@@ -279,7 +296,8 @@ public class MaterialTyper{
             commentJavaReady.ifPresent(c -> content.append("/**\n" + c + "\n */\n"));
             content.append(getMethod).append("\n\n");
 
-
+            commentJavaReady.ifPresent(c -> content.append("/**\n" + c + "\n */\n"));
+            content.append(clearParamMethod).append("\n\n");
         }
 
         String fullClass = (wrapper ? wrapperTemplate : classTemplate)

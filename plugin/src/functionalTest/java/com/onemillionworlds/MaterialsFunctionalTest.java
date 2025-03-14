@@ -5,8 +5,6 @@ package com.onemillionworlds;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.Writer;
-import java.io.FileWriter;
 import java.nio.file.Files;
 
 import org.gradle.testkit.runner.BuildTask;
@@ -14,7 +12,6 @@ import org.gradle.testkit.runner.GradleRunner;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.TaskOutcome;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MaterialsFunctionalTest extends FunctionalTestBase{
@@ -124,7 +121,14 @@ class MaterialsFunctionalTest extends FunctionalTestBase{
                         setParam("MorphWeights", VarType.FloatArray,  morphWeights);
                     }
                 """));
-
+        assertTrue(content.contains("""
+                    /**
+                     *  For Morph animation
+                     */
+                    public void clearMorphWeightsParam(){
+                        clearParam("MorphWeights");
+                    }
+                """));
     }
 
     @Test
@@ -235,6 +239,16 @@ class MaterialsFunctionalTest extends FunctionalTestBase{
                         setInt("Indeterminate", indeterminate);
                     }
                 """));
+
+        assertTrue(content.contains("""
+                    /**
+                     *  0 or 1, if indeterminate will have a stiped pattern <br>
+                     *  Also, this is a second line
+                     */
+                    public void clearIndeterminateParam(){
+                        clearParam("Indeterminate");
+                    }
+                """));
     }
 
     @Test
@@ -292,6 +306,14 @@ class MaterialsFunctionalTest extends FunctionalTestBase{
                      */
                     public void setFillFraction(float fillFraction){
                         setFloat("FillFraction", fillFraction);
+                    }
+                """));
+        assertTrue(content.contains("""
+                    /**
+                     *  Current usage fraction, from 0 to 1
+                     */
+                    public void clearFillFractionParam(){
+                        clearParam("FillFraction");
                     }
                 """));
 
