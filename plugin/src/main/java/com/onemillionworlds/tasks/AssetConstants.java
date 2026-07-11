@@ -5,6 +5,7 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.FileCollection;
+import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputFile;
@@ -78,6 +79,16 @@ public class AssetConstants extends DefaultTask{
      */
     FileCollection assetFlatFiles;
 
+    /**
+     * The name of the project owning this task. Wired during configuration to avoid accessing Project at execution time.
+     */
+    String projectName;
+
+    /**
+     * The runtime classpath to scan for assets in jars. Wired during configuration to avoid accessing Project at execution time.
+     */
+    FileCollection runtimeClasspath;
+
     @TaskAction
     public void createTypedMaterials(){
         AssetsFolder assetsFolder = new AssetsFolder("");
@@ -105,7 +116,8 @@ public class AssetConstants extends DefaultTask{
                 Files.writeString(getDestinationFile().toPath(), fullClass);
             }
             if(getDestinationFlatFile()!=null){
-                String flatFileStringBuilder = FLAT_FILE_CONTEXT_CHANGE+getProject().getName() + "\n" +
+                String effectiveProjectName = projectName == null ? "" : projectName;
+                String flatFileStringBuilder = FLAT_FILE_CONTEXT_CHANGE+ effectiveProjectName + "\n" +
                         assetsFolder.getFileListingContent();
                 Files.writeString(getDestinationFlatFile().toPath(), flatFileStringBuilder);
             }
@@ -119,8 +131,10 @@ public class AssetConstants extends DefaultTask{
 
         Pattern withinJarPattern = Pattern.compile(withinJarFileRegex == null ? ".*" : withinJarFileRegex);
 
-        Configuration test = getProject().getConfigurations().getByName("runtimeClasspath");
-        Set<File> resolve = test.resolve();
+        if (runtimeClasspath == null){
+            return new AssetsFolder("");
+        }
+        Set<File> resolve = runtimeClasspath.getFiles();
 
         AssetsFolder assetsFolder = new AssetsFolder("");
         resolve.forEach(file -> {
@@ -214,9 +228,15 @@ public class AssetConstants extends DefaultTask{
     @InputFiles
     public FileCollection getFileCollectionFromSourceDirs() {
         Project project = getProject();
-        SourceSetContainer sourceSets = (SourceSetContainer) project.getProperties().get("sourceSets");
-        SourceSet mainSourceSet = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
-        FileCollection resources = project.files(mainSourceSet.getResources().getSrcDirs());
+        SourceSetContainer sourceSets = project.getExtensions().findByType(SourceSetContainer.class);
+        FileCollection resources;
+        if (sourceSets != null){
+            SourceSet mainSourceSet = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME);
+            resources = project.files(mainSourceSet.getResources().getSrcDirs());
+        } else {
+            // Fallback if Java plugin is not applied
+            resources = project.files(new File(project.getProjectDir(), "src/main/resources"));
+        }
 
         if(outputResourcesRoot == null){
             return resources;
@@ -233,6 +253,26 @@ public class AssetConstants extends DefaultTask{
 
     public void setAssetFlatFiles(FileCollection assetFlatFiles) {
         this.assetFlatFiles = assetFlatFiles;
+    }
+
+    @Optional
+    @Input
+    public String getProjectName(){
+        return projectName;
+    }
+
+    public void setProjectName(String projectName){
+        this.projectName = projectName;
+    }
+
+    @Optional
+    @Classpath
+    public FileCollection getRuntimeClasspath(){
+        return runtimeClasspath;
+    }
+
+    public void setRuntimeClasspath(FileCollection runtimeClasspath){
+        this.runtimeClasspath = runtimeClasspath;
     }
 
     @Optional
