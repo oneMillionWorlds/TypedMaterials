@@ -6,11 +6,13 @@ import com.onemillionworlds.tasks.MaterialFactoryTask;
 import com.onemillionworlds.tasks.TypedJarMaterials;
 import com.onemillionworlds.tasks.TypedLocalMaterials;
 import org.gradle.api.Project;
+import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.file.Directory;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.SourceSetContainer;
-
-import java.io.File;
+import org.gradle.api.provider.Provider;
+import org.gradle.api.tasks.TaskProvider;
 
 @SuppressWarnings("unused")
 public class TypedMaterialsExtension{
@@ -19,13 +21,31 @@ public class TypedMaterialsExtension{
 
     /**
      * The directory where the generated sources will be placed relative to the module root.
-     * Default is "src/main/generated/java"
+     * Default is "src/main/generatedtypedmaterials/java"
      */
     private final Property<String> generatedSourcesDir;
 
+    /**
+     * The directory where the generated resources will be placed relative to the module root.
+     * Default is "src/main/generatedtypedmaterials/resources"
+     */
     private final Property<String> generatedResourcesDir;
 
     private final Property<String> materialFactoryClass;
+
+    /**
+     * The generated sources directory, carrying the tasks that generate into it (so anything consuming the main
+     * source set depends on them)
+     */
+    private final ConfigurableFileCollection generatedSources;
+
+    /**
+     * The generated resources directory, carrying the tasks that generate into it (so anything consuming the main
+     * source set depends on them)
+     */
+    private final ConfigurableFileCollection generatedResources;
+
+    private TaskProvider<MaterialFactoryTask> materialFactoryTask;
 
     public TypedMaterialsExtension(Project project) {
         this.project = project;
@@ -39,6 +59,9 @@ public class TypedMaterialsExtension{
 
         materialFactoryClass = objectFactory.property(String.class);
         materialFactoryClass.set("com.onemillionworlds.typedmaterials.materials.MaterialFactory");
+
+        generatedSources = objectFactory.fileCollection().from(getGeneratedSourcesDirectory());
+        generatedResources = objectFactory.fileCollection().from(getGeneratedResourcesDirectory());
     }
 
     public void jmeMaterials(){
@@ -73,13 +96,12 @@ public class TypedMaterialsExtension{
      * @param fullyQualifiedAssetsClass the fully qualified name of the class will be generated to contains the asset paths. E.g. "com.mygame.assets.Assets"
      */
     public void assetsConstant(String fullyQualifiedAssetsClass){
-        project.getTasks().create("assetConstants", AssetConstants.class, task -> {
-            task.setGroup("typedMaterials");
-            task.setFullyQualifiedAssetsClass(fullyQualifiedAssetsClass);
-            task.setOutputSourcesRoot(project.file(generatedSourcesDir));
+        TaskProvider<AssetConstants> task = project.getTasks().register("assetConstants", AssetConstants.class, t -> {
+            t.setGroup("typedMaterials");
+            t.getFullyQualifiedAssetsClass().set(fullyQualifiedAssetsClass);
+            t.getOutputSourcesRoot().set(getGeneratedSourcesDirectory());
         });
-        project.getTasks().named("compileJava").configure(compileJava -> compileJava.dependsOn("assetConstants"));
-        addGeneratedSourcesToMainSourceSet();
+        generatedSources.builtBy(task);
     }
 
     /**
@@ -95,12 +117,11 @@ public class TypedMaterialsExtension{
      * </p>
      */
     public void assetsFile(){
-        project.getTasks().create("assetsFile", AssetConstants.class, task -> {
-            task.setGroup("typedMaterials");
-            task.setOutputResourcesRoot(project.file(generatedResourcesDir));
+        TaskProvider<AssetConstants> task = project.getTasks().register("assetsFile", AssetConstants.class, t -> {
+            t.setGroup("typedMaterials");
+            t.getOutputResourcesRoot().set(getGeneratedResourcesDirectory());
         });
-        project.getTasks().named("processResources").configure(processResources -> processResources.dependsOn("assetsFile"));
-        addGeneratedResourcesToMainSourceSet();
+        generatedResources.builtBy(task);
     }
 
     /**
@@ -131,14 +152,14 @@ public class TypedMaterialsExtension{
      * </p>
      */
     public void jarAssetsFile(String jarFilterRegex, String fileRegex){
-        project.getTasks().create("assetsFile", AssetConstants.class, task -> {
-            task.setGroup("typedMaterials");
-            task.setOutputResourcesRoot(project.file(generatedResourcesDir));
-            task.setJarFilterRegex(jarFilterRegex);
-            task.setWithinJarFileRegex(fileRegex);
+        TaskProvider<AssetConstants> task = project.getTasks().register("assetsFile", AssetConstants.class, t -> {
+            t.setGroup("typedMaterials");
+            t.getOutputResourcesRoot().set(getGeneratedResourcesDirectory());
+            t.getJarFilterRegex().set(jarFilterRegex);
+            t.getWithinJarFileRegex().set(fileRegex);
+            t.getRuntimeClasspath().from(project.getConfigurations().named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME));
         });
-        project.getTasks().named("processResources").configure(processResources -> processResources.dependsOn("assetsFile"));
-        addGeneratedResourcesToMainSourceSet();
+        generatedResources.builtBy(task);
     }
 
     /**
@@ -149,15 +170,15 @@ public class TypedMaterialsExtension{
      * @param outputPackage the package where the generated materials will be placed. E.g. "org.jme3.core.materials"
      */
     public void librarySearch(String taskName, String jarFilterRegex, String outputPackage){
-        project.getTasks().register(taskName, TypedJarMaterials.class, task -> {
-            task.setGroup("typedMaterials");
-            task.setOutputPackage(outputPackage);
-            task.setOutputSourcesRoot(project.file(generatedSourcesDir));
-            task.setJarFilterRegex(jarFilterRegex);
+        TaskProvider<TypedJarMaterials> task = project.getTasks().register(taskName, TypedJarMaterials.class, t -> {
+            t.setGroup("typedMaterials");
+            t.getOutputPackage().set(outputPackage);
+            t.getOutputSourcesRoot().set(getGeneratedSourcesDirectory());
+            t.getJarFilterRegex().set(jarFilterRegex);
+            t.getRuntimeClasspath().from(project.getConfigurations().named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME));
         });
-        setUpMaterialFactoryTaskIfNotPresent();
-        project.getTasks().named("materialFactory").configure(compileJava -> compileJava.dependsOn(taskName));
-        addGeneratedSourcesToMainSourceSet();
+        generatedSources.builtBy(task);
+        getMaterialFactoryTask().configure(factory -> factory.getMaterialRecordFiles().from(task.flatMap(TypedJarMaterials::getBuiltFilesRecordFile)));
     }
 
     /**
@@ -178,16 +199,15 @@ public class TypedMaterialsExtension{
      * @param resourcesDirName the name of the resources directory. E.g. "resources" or "assets"
      */
     public void localMaterialsSearch(String outputPackage, String materialsDirectory, String resourcesDirName){
-        project.getTasks().register("localTypedMaterials", TypedLocalMaterials.class, task -> {
-            task.setGroup("typedMaterials");
-            task.setInputDirectory(project.file(materialsDirectory));
-            task.setOutputPackage(outputPackage);
-            task.setOutputSourcesRoot(project.file(generatedSourcesDir));
-            task.setResourcesDir(resourcesDirName);
+        TaskProvider<TypedLocalMaterials> task = project.getTasks().register("localTypedMaterials", TypedLocalMaterials.class, t -> {
+            t.setGroup("typedMaterials");
+            t.getInputDirectory().set(project.getLayout().getProjectDirectory().dir(materialsDirectory));
+            t.getOutputPackage().set(outputPackage);
+            t.getOutputSourcesRoot().set(getGeneratedSourcesDirectory());
+            t.getResourcesDir().set(resourcesDirName);
         });
-        setUpMaterialFactoryTaskIfNotPresent();
-        project.getTasks().named("materialFactory").configure(compileJava -> compileJava.dependsOn("localTypedMaterials"));
-        addGeneratedSourcesToMainSourceSet();
+        generatedSources.builtBy(task);
+        getMaterialFactoryTask().configure(factory -> factory.getMaterialRecordFiles().from(task.flatMap(TypedLocalMaterials::getBuiltFilesRecordFile)));
     }
 
     /**
@@ -205,32 +225,45 @@ public class TypedMaterialsExtension{
         return materialFactoryClass;
     }
 
-    private void setUpMaterialFactoryTaskIfNotPresent(){
-        if(project.getTasks().findByName("materialFactory") == null){
-            project.getTasks().create("materialFactory", MaterialFactoryTask.class, task -> {
+    /**
+     * The resolved directory that generated sources are placed in
+     */
+    public Provider<Directory> getGeneratedSourcesDirectory(){
+        return project.getLayout().getProjectDirectory().dir(generatedSourcesDir);
+    }
+
+    /**
+     * The resolved directory that generated resources are placed in
+     */
+    public Provider<Directory> getGeneratedResourcesDirectory(){
+        return project.getLayout().getProjectDirectory().dir(generatedResourcesDir);
+    }
+
+    /**
+     * The generated sources directory as a file collection that knows which tasks generate into it.
+     * (Mostly used internally by the plugin)
+     */
+    public ConfigurableFileCollection getGeneratedSources(){
+        return generatedSources;
+    }
+
+    /**
+     * The generated resources directory as a file collection that knows which tasks generate into it.
+     * (Mostly used internally by the plugin)
+     */
+    public ConfigurableFileCollection getGeneratedResources(){
+        return generatedResources;
+    }
+
+    private TaskProvider<MaterialFactoryTask> getMaterialFactoryTask(){
+        if(materialFactoryTask == null){
+            materialFactoryTask = project.getTasks().register("materialFactory", MaterialFactoryTask.class, task -> {
                 task.setGroup("typedMaterials");
-                task.setOutputSourcesRoot(project.file(generatedSourcesDir));
-                task.setFullyQualifiedOutputClass(materialFactoryClass.get());
+                task.getOutputSourcesRoot().set(getGeneratedSourcesDirectory());
+                task.getFullyQualifiedOutputClass().set(materialFactoryClass);
             });
-            project.getTasks().named("compileJava").configure(compileJava -> compileJava.dependsOn("materialFactory"));
+            generatedSources.builtBy(materialFactoryTask);
         }
-    }
-
-    private void addGeneratedSourcesToMainSourceSet(){
-        project.getExtensions().getByType(SourceSetContainer.class).named("main", sourceSet -> {
-            File generatedDir = project.file(generatedSourcesDir.get());
-            if (!sourceSet.getJava().getSrcDirs().contains(generatedDir)) {
-                sourceSet.getJava().srcDir(generatedDir);
-            }
-        });
-    }
-
-    private void addGeneratedResourcesToMainSourceSet(){
-        project.getExtensions().getByType(SourceSetContainer.class).named("main", sourceSet -> {
-            File generatedDir = project.file(generatedResourcesDir.get());
-            if (!sourceSet.getResources().getSrcDirs().contains(generatedDir)) {
-                sourceSet.getResources().srcDir(generatedDir);
-            }
-        });
+        return materialFactoryTask;
     }
 }

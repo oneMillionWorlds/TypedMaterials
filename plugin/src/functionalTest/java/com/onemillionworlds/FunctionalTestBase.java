@@ -1,5 +1,6 @@
 package com.onemillionworlds;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
@@ -11,6 +12,19 @@ public class FunctionalTestBase{
 
     @TempDir
     File projectDir;
+
+    /**
+     * All functional tests run with the configuration cache on (and failing on any problems) to ensure the plugin
+     * remains compatible with it
+     */
+    @BeforeEach
+    void enableConfigurationCache() throws IOException{
+        writeString(new File(projectDir, "gradle.properties"), """
+                org.gradle.configuration-cache=true
+                org.gradle.configuration-cache.problems=fail
+                """);
+    }
+
     protected File getBuildFile() {
         return new File(projectDir, "build.gradle");
     }

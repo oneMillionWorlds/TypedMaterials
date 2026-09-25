@@ -2,51 +2,91 @@ package com.onemillionworlds.tasks;
 
 import com.onemillionworlds.utilities.MaterialTyper;
 import org.gradle.api.DefaultTask;
+import org.gradle.api.file.Directory;
+import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.ProjectLayout;
+import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.work.DisableCachingByDefault;
 
+import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TypedLocalMaterials extends DefaultTask{
+@DisableCachingByDefault(because = "Generates source files directly into the project; quicker to regenerate than to fetch from a cache")
+public abstract class TypedLocalMaterials extends DefaultTask{
 
-    File inputDirectory;
+    @Inject
+    public TypedLocalMaterials(ProjectLayout layout){
+        getResourcesDir().convention("resources");
+        getBuiltFilesRecordFile().convention(layout.getBuildDirectory().file("typedMaterials/" + getName()));
+    }
 
-    String outputPackage;
+    @Input
+    public abstract Property<String> getOutputPackage();
 
-    File outputSourcesRoot;
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public abstract DirectoryProperty getInputDirectory();
 
-    String resourcesDir = "resources";
+    @Internal
+    public abstract DirectoryProperty getOutputSourcesRoot();
+
+    /**
+     * The name of the resources directory, everything after this in a material's path is its asset path.
+     * E.g. "resources" or "assets"
+     */
+    @Input
+    public abstract Property<String> getResourcesDir();
+
+    /**
+     * A file listing the fully qualified material classes generated, used by the material factory
+     */
+    @OutputFile
+    public abstract RegularFileProperty getBuiltFilesRecordFile();
+
+    @OutputDirectory
+    public Provider<Directory> getOutputDirectory(){
+        return getOutputSourcesRoot().dir(getOutputPackage().map(outputPackage -> outputPackage.replace(".", "/")));
+    }
 
     @TaskAction
     public void createTypedMaterials() throws IOException{
         List<String> fullyQualifiedMaterialClasses = new ArrayList<>();
 
-        searchAndCreateClasses(inputDirectory, fullyQualifiedMaterialClasses);
+        File outputDirectory = getOutputDirectory().get().getAsFile();
+        new File(outputDirectory, "wrapper").mkdirs();
+
+        searchAndCreateClasses(getInputDirectory().get().getAsFile(), outputDirectory, fullyQualifiedMaterialClasses);
 
         try {
-            Files.writeString(getBuiltFilesRecordFile().toPath(), String.join("\n", fullyQualifiedMaterialClasses));
+            Files.writeString(getBuiltFilesRecordFile().get().getAsFile().toPath(), String.join("\n", fullyQualifiedMaterialClasses));
         } catch (Exception e) {
             throw new RuntimeException("Error writing record of generation: " + getName() + ". " + e.getMessage(), e);
         }
     }
 
-    private void searchAndCreateClasses(File file, List<String> fullyQualifiedMaterialClasses_out) throws IOException{
+    private void searchAndCreateClasses(File file, File outputDirectory, List<String> fullyQualifiedMaterialClasses_out) throws IOException{
         if (file.isDirectory()){
             for( File fileToProcess : file.listFiles()){
-                searchAndCreateClasses(fileToProcess, fullyQualifiedMaterialClasses_out);
+                searchAndCreateClasses(fileToProcess, outputDirectory, fullyQualifiedMaterialClasses_out);
             }
         }else{
             if (file.getPath().endsWith(".j3md")){
-                File outputDirectory = getOutputDirectory();
-
-                String prePathRegex = ".*/" + resourcesDir + "/";
+                String outputPackage = getOutputPackage().get();
+                String prePathRegex = ".*/" + getResourcesDir().get() + "/";
 
                 String fullDefName = file.getPath().replace('\\', '/').replaceAll(prePathRegex, "");
                 String className = file.toPath().getFileName().toString().replace(".j3md", "") + "Material";
@@ -65,53 +105,4 @@ public class TypedLocalMaterials extends DefaultTask{
             }
         }
     }
-
-    @Input
-    public String getOutputPackage(){
-        return outputPackage;
-    }
-
-    @InputDirectory
-    public File getInputDirectory(){
-        return inputDirectory;
-    }
-
-    @OutputDirectory
-    public File getOutputDirectory(){
-        String packageFolder = outputPackage.replace(".", "/");
-        return new File(outputSourcesRoot, packageFolder);
-    }
-
-    @OutputFile
-    public File getBuiltFilesRecordFile(){
-        return new File(getProject().getLayout().getBuildDirectory().dir("typedMaterials").get().getAsFile(), getName());
-    }
-
-    @OutputDirectory
-    public File getOutputDirectoryWrapper(){
-        return new File(getOutputDirectory(), "wrapper");
-    }
-
-    @Input
-    public String getResourcesDir(){
-        return resourcesDir;
-    }
-
-    public void setResourcesDir(String resourcesDir){
-        this.resourcesDir = resourcesDir;
-    }
-
-    public void setOutputSourcesRoot(File outputSourcesRoot){
-        this.outputSourcesRoot = outputSourcesRoot;
-    }
-
-    public void setOutputPackage(String outputPackage){
-        this.outputPackage = outputPackage;
-    }
-
-    public void setInputDirectory(File inputDirectory){
-        this.inputDirectory = inputDirectory;
-    }
-
-
 }

@@ -2,10 +2,19 @@ package com.onemillionworlds.tasks;
 
 import com.onemillionworlds.utilities.FactoryBuilder;
 import org.gradle.api.DefaultTask;
+import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.RegularFile;
+import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.InputFiles;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.work.DisableCachingByDefault;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,31 +29,29 @@ import java.util.stream.Stream;
  * (Mostly this task is used internally by the plugin)
  * </p>
  */
-public class MaterialFactoryTask extends DefaultTask{
+@DisableCachingByDefault(because = "Generates source files directly into the project; quicker to regenerate than to fetch from a cache")
+public abstract class MaterialFactoryTask extends DefaultTask{
 
-    File outputSourcesRoot;
-
-    private String fullyQuailfiedOutputClass;
-
-    public void setOutputSourcesRoot(File outputSourcesRoot){
-        this.outputSourcesRoot = outputSourcesRoot;
-    }
+    @Internal
+    public abstract DirectoryProperty getOutputSourcesRoot();
 
     @Input
-    public String getFullyQuailfiedOutputClass(){
-        return fullyQuailfiedOutputClass;
-    }
+    public abstract Property<String> getFullyQualifiedOutputClass();
 
-    public void setFullyQualifiedOutputClass(String fullyQuailfiedOutputClass){
-        this.fullyQuailfiedOutputClass = fullyQuailfiedOutputClass;
-    }
+    /**
+     * The record files produced by the material generating tasks, each listing the fully qualified material classes
+     * that task produced
+     */
+    @InputFiles
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract ConfigurableFileCollection getMaterialRecordFiles();
 
     @TaskAction
     public void createMaterialsFactory(){
         //determine all the fullyQualified material classes
 
         List<String> fullyQualifiedMaterialClasses = new ArrayList<>();
-        for(File file : getMaterialResortDirectory().listFiles()){
+        for(File file : getMaterialRecordFiles()){
             //read the file and add the fully qualified class name to the list
             try (Stream<String> stream = Files.lines(file.toPath())) {
                 stream.forEach(fullyQualifiedMaterialClasses::add);
@@ -60,33 +67,25 @@ public class MaterialFactoryTask extends DefaultTask{
         );
 
         try{
-            Files.writeString(getOutputFile().toPath(), content);
+            Files.writeString(getOutputFile().get().getAsFile().toPath(), content);
         } catch(IOException e){
             throw new RuntimeException(e);
         }
 
     }
 
-    @InputDirectory
-    public File getMaterialResortDirectory(){
-        return getProject().getLayout().getBuildDirectory().dir("typedMaterials").get().getAsFile();
-    }
-
     @OutputFile
-    public File getOutputFile(){
-        String packageFolder = getDestinationPackage()
-                .replace(".", "/");
-
-        return new File(new File(outputSourcesRoot, packageFolder), getClassName()+ ".java");
+    public Provider<RegularFile> getOutputFile(){
+        return getOutputSourcesRoot().file(getFullyQualifiedOutputClass().map(fqcn -> fqcn.replace(".", "/") + ".java"));
     }
 
     private String getDestinationPackage(){
-        return fullyQuailfiedOutputClass
+        return getFullyQualifiedOutputClass().get()
                 .replaceAll("\\.[A-Za-z0-9_]+$", "");
     }
 
     private String getClassName(){
-        return fullyQuailfiedOutputClass
+        return getFullyQualifiedOutputClass().get()
                 .replaceAll(".*\\.", "");
     }
 }
