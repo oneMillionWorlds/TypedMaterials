@@ -38,19 +38,25 @@ public class FunctionalTestBase{
     }
 
     protected File getGeneratedJavaFilesRoot() {
-        return new File(projectDir,  "src/main/generatedtypedmaterials/java");
+        return new File(projectDir,  "build/generated/sources/typedMaterials");
     }
 
     protected File getGeneratedResourcesFilesRoot() {
-        return new File(projectDir,  "src/main/generatedtypedmaterials/resources");
+        return new File(projectDir,  "build/generated/resources/typedMaterials");
     }
 
-    protected File getGeneratedJavaFile(String pathRelativeToRoot) {
-        return new File(getGeneratedJavaFilesRoot(),  pathRelativeToRoot);
+    /**
+     * @param taskName the task that generated the file (each task generates into its own directory)
+     */
+    protected File getGeneratedJavaFile(String taskName, String pathRelativeToRoot) {
+        return new File(getGeneratedJavaFilesRoot(),  taskName + "/" + pathRelativeToRoot);
     }
 
-    protected File getGeneratedResourcesFile(String pathRelativeToRoot) {
-        return new File(getGeneratedResourcesFilesRoot(),  pathRelativeToRoot);
+    /**
+     * @param taskName the task that generated the file (each task generates into its own directory)
+     */
+    protected File getGeneratedResourcesFile(String taskName, String pathRelativeToRoot) {
+        return new File(getGeneratedResourcesFilesRoot(),  taskName + "/" + pathRelativeToRoot);
     }
 
     protected File localResourcesRoot_resourcesStyle(){

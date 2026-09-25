@@ -4,26 +4,24 @@ import com.onemillionworlds.tasks.assets.AssetsFolder;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.RegularFile;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.work.DisableCachingByDefault;
 
-import javax.inject.Inject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -31,8 +29,8 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-@DisableCachingByDefault(because = "Generates source files directly into the project; quicker to regenerate than to fetch from a cache")
-public class AssetConstants extends DefaultTask{
+@DisableCachingByDefault(because = "Generation is cheap; quicker to regenerate than to fetch from a cache")
+public abstract class AssetConstants extends DefaultTask{
 
     public static final String FLAT_FILE_CONTEXT_CHANGE = "::";
     public static final String ASSETS_FILE_NAME = "com_onemillionworlds_typedmaterials_assets.txt";
@@ -57,79 +55,90 @@ public class AssetConstants extends DefaultTask{
     /**
      * If present, use this as the class name for the Assets constants class
      */
-    private final Property<String> fullyQualifiedAssetsClass;
+    @Optional
+    @Input
+    public abstract Property<String> getFullyQualifiedAssetsClass();
 
     /**
-     * If present use this as a regex to defermine if a jar should be fully searched for assets.
+     * If present use this as a regex to determine if a jar should be fully searched for assets.
      * (This means going through every file in the jar, not using the flat file that helpful libraries may
      * leave in the jar)
      */
-    private final Property<String> jarFilterRegex;
+    @Optional
+    @Input
+    public abstract Property<String> getJarFilterRegex();
 
     /**
      * If present, use this regex to filter the files within the jars, only those that match will be included
      */
-    private final Property<String> withinJarFileRegex;
-
-    /**
-     * If present, use this sources root to output all the assets as a java class
-     */
-    private final DirectoryProperty outputSourcesRoot;
-
-    /**
-     * If present, use this resources root to output all the assets as a flat file
-     */
-    private final DirectoryProperty outputResourcesRoot;
-
-    /**
-     * If present, will use these files
-     */
-    private final ConfigurableFileCollection assetFlatFiles;
+    @Optional
+    @Input
+    public abstract Property<String> getWithinJarFileRegex();
 
     /**
      * The local resource directories to search for assets. By default, the plugin sets this to the main resource
      * directories.
      */
-    private final ConfigurableFileCollection resourceDirectories;
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public abstract ConfigurableFileCollection getResourceDirectories();
+
+    /**
+     * Asset flat files (e.g. produced by the assetsFile task of other modules) whose assets should be included
+     */
+    @InputFiles
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract ConfigurableFileCollection getAssetFlatFiles();
 
     /**
      * The name of the project owning this task, used as the context in the flat file. By default, the plugin sets
      * this to the project name.
      */
-    private final Property<String> projectName;
+    @Optional
+    @Input
+    public abstract Property<String> getProjectName();
 
     /**
      * The classpath whose jars will be searched when a jarFilterRegex is set. When registering this task manually
      * (rather than via the typedMaterials extension) this should be set to the runtimeClasspath configuration.
+     * <p>
+     * Jar names are significant (they are used for filtering and as the context), so this is NAME_ONLY rather than
+     * a @Classpath
+     * </p>
      */
-    private final ConfigurableFileCollection runtimeClasspath;
+    @InputFiles
+    @PathSensitive(PathSensitivity.NAME_ONLY)
+    public abstract ConfigurableFileCollection getRuntimeClasspath();
 
-    @Inject
-    public AssetConstants(ObjectFactory objects){
-        fullyQualifiedAssetsClass = objects.property(String.class);
-        jarFilterRegex = objects.property(String.class);
-        withinJarFileRegex = objects.property(String.class);
-        outputSourcesRoot = objects.directoryProperty();
-        outputResourcesRoot = objects.directoryProperty();
-        assetFlatFiles = objects.fileCollection();
-        resourceDirectories = objects.fileCollection();
-        projectName = objects.property(String.class);
-        runtimeClasspath = objects.fileCollection();
-    }
+    /**
+     * If present, the assets are output as a java class into this directory. It should not be shared with any other
+     * task.
+     */
+    @Optional
+    @OutputDirectory
+    public abstract DirectoryProperty getOutputSourcesRoot();
+
+    /**
+     * If present, the assets are output as a flat file into this directory. It should not be shared with any other
+     * task.
+     */
+    @Optional
+    @OutputDirectory
+    public abstract DirectoryProperty getOutputResourcesRoot();
 
     @TaskAction
     public void createTypedMaterials(){
         AssetsFolder assetsFolder = new AssetsFolder("");
 
-        for(File folder : resourceDirectories){
+        for(File folder : getResourceDirectories()){
             assetsFolder.addAll(searchForAllFiles(folder, "", null));
         }
 
         AssetsFolder resourcesFolderFast = searchAllFromSuppliedFlatFiles();
         assetsFolder.addAll(resourcesFolderFast);
 
-        if(jarFilterRegex.isPresent() && !jarFilterRegex.get().isBlank()){
-            AssetsFolder jarAssets = searchAllFromJars(jarFilterRegex.get());
+        if(getJarFilterRegex().isPresent() && !getJarFilterRegex().get().isBlank()){
+            AssetsFolder jarAssets = searchAllFromJars(getJarFilterRegex().get());
             assetsFolder.addAll(jarAssets);
         }
 
@@ -141,12 +150,16 @@ public class AssetConstants extends DefaultTask{
                         .replace("[PACKAGE]", getDestinationPackage())
                         .replace("[CLASS]", getClassName())
                         .replace("[CONTENT]", classContent);
-                Files.writeString(getDestinationFile().get().getAsFile().toPath(), fullClass);
+                Path destination = getDestinationFile().get().getAsFile().toPath();
+                Files.createDirectories(destination.getParent());
+                Files.writeString(destination, fullClass);
             }
             if(getDestinationFlatFile().isPresent()){
-                String flatFileStringBuilder = FLAT_FILE_CONTEXT_CHANGE + projectName.getOrElse("") + "\n" +
+                String flatFileStringBuilder = FLAT_FILE_CONTEXT_CHANGE + getProjectName().getOrElse("") + "\n" +
                         assetsFolder.getFileListingContent();
-                Files.writeString(getDestinationFlatFile().get().getAsFile().toPath(), flatFileStringBuilder);
+                Path destination = getDestinationFlatFile().get().getAsFile().toPath();
+                Files.createDirectories(destination.getParent());
+                Files.writeString(destination, flatFileStringBuilder);
             }
         } catch (Exception e) {
             throw new RuntimeException("Error writing record of generation: " + getName() + ". " + e.getMessage(), e);
@@ -156,9 +169,9 @@ public class AssetConstants extends DefaultTask{
     private AssetsFolder searchAllFromJars(String jarFilterRegex){
         Pattern pattern = Pattern.compile(jarFilterRegex);
 
-        Pattern withinJarPattern = Pattern.compile(withinJarFileRegex.getOrElse(".*"));
+        Pattern withinJarPattern = Pattern.compile(getWithinJarFileRegex().getOrElse(".*"));
 
-        Set<File> resolve = runtimeClasspath.getFiles();
+        Set<File> resolve = getRuntimeClasspath().getFiles();
 
         if (resolve.isEmpty()){
             getLogger().warn("Task " + getPath() + " has a jarFilterRegex but no runtimeClasspath to search");
@@ -218,7 +231,7 @@ public class AssetConstants extends DefaultTask{
     private AssetsFolder searchAllFromSuppliedFlatFiles(){
         AssetsFolder assetsFolder = new AssetsFolder("");
 
-        assetFlatFiles.forEach(file -> {
+        getAssetFlatFiles().forEach(file -> {
             try {
                 List<String> lines = Files.readAllLines(file.toPath());
                 assetsFolder.addAssetsFromFlatFile(lines);
@@ -229,113 +242,23 @@ public class AssetConstants extends DefaultTask{
         return assetsFolder;
     }
 
-    @Optional
-    @Input
-    public Property<String> getFullyQualifiedAssetsClass(){
-        return fullyQualifiedAssetsClass;
-    }
-
-    public void setFullyQualifiedAssetsClass(String fullyQualifiedAssetsClass){
-        this.fullyQualifiedAssetsClass.set(fullyQualifiedAssetsClass);
-    }
-
-    @Optional
-    @Input
-    public Property<String> getJarFilterRegex(){
-        return jarFilterRegex;
-    }
-
-    public void setJarFilterRegex(String jarFilterRegex){
-        this.jarFilterRegex.set(jarFilterRegex);
-    }
-
-    @Optional
-    @Input
-    public Property<String> getWithinJarFileRegex(){
-        return withinJarFileRegex;
-    }
-
-    public void setWithinJarFileRegex(String withinJarFileRegex){
-        this.withinJarFileRegex.set(withinJarFileRegex);
-    }
-
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
-    public ConfigurableFileCollection getResourceDirectories(){
-        return resourceDirectories;
-    }
-
-    @InputFiles
-    @PathSensitive(PathSensitivity.NONE)
-    public ConfigurableFileCollection getAssetFlatFiles() {
-        return assetFlatFiles;
-    }
-
-    public void setAssetFlatFiles(FileCollection assetFlatFiles) {
-        this.assetFlatFiles.setFrom(assetFlatFiles);
-    }
-
-    @Optional
-    @Input
-    public Property<String> getProjectName(){
-        return projectName;
-    }
-
-    public void setProjectName(String projectName){
-        this.projectName.set(projectName);
-    }
-
-    /**
-     * Jar names are significant (they are used for filtering and as the context), so this is NAME_ONLY rather than
-     * a @Classpath
-     */
-    @InputFiles
-    @PathSensitive(PathSensitivity.NAME_ONLY)
-    public ConfigurableFileCollection getRuntimeClasspath(){
-        return runtimeClasspath;
-    }
-
-    public void setRuntimeClasspath(FileCollection runtimeClasspath){
-        this.runtimeClasspath.setFrom(runtimeClasspath);
-    }
-
     @Internal
-    public DirectoryProperty getOutputSourcesRoot(){
-        return outputSourcesRoot;
-    }
-
-    public void setOutputSourcesRoot(File outputSourcesRoot){
-        this.outputSourcesRoot.set(outputSourcesRoot);
-    }
-
-    @Internal
-    public DirectoryProperty getOutputResourcesRoot(){
-        return outputResourcesRoot;
-    }
-
-    public void setOutputResourcesRoot(File outputResourcesRoot){
-        this.outputResourcesRoot.set(outputResourcesRoot);
-    }
-
-    @Optional
-    @OutputFile
     public Provider<RegularFile> getDestinationFile(){
-        return outputSourcesRoot.file(fullyQualifiedAssetsClass.map(fqcn -> fqcn.replace(".", "/") + ".java"));
+        return getOutputSourcesRoot().file(getFullyQualifiedAssetsClass().map(fqcn -> fqcn.replace(".", "/") + ".java"));
     }
 
-    @Optional
-    @OutputFile
+    @Internal
     public Provider<RegularFile> getDestinationFlatFile(){
-        return outputResourcesRoot.file(ASSETS_FILE_NAME);
+        return getOutputResourcesRoot().file(ASSETS_FILE_NAME);
     }
 
     private String getDestinationPackage(){
-        return fullyQualifiedAssetsClass.get()
+        return getFullyQualifiedAssetsClass().get()
                 .replaceAll("\\.[A-Za-z0-9_]+$", "");
     }
 
     private String getClassName(){
-        return fullyQualifiedAssetsClass.get()
+        return getFullyQualifiedAssetsClass().get()
                 .replaceAll(".*\\.", "");
     }
 }

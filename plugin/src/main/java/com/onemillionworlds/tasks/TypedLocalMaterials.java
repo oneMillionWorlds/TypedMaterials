@@ -4,6 +4,7 @@ import com.onemillionworlds.utilities.MaterialTyper;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.FileSystemOperations;
 import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
@@ -25,7 +26,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-@DisableCachingByDefault(because = "Generates source files directly into the project; quicker to regenerate than to fetch from a cache")
+@DisableCachingByDefault(because = "Generation is cheap; quicker to regenerate than to fetch from a cache")
 public abstract class TypedLocalMaterials extends DefaultTask{
 
     @Inject
@@ -34,6 +35,9 @@ public abstract class TypedLocalMaterials extends DefaultTask{
         getBuiltFilesRecordFile().convention(layout.getBuildDirectory().file("typedMaterials/" + getName()));
     }
 
+    @Inject
+    protected abstract FileSystemOperations getFileSystemOperations();
+
     @Input
     public abstract Property<String> getOutputPackage();
 
@@ -41,7 +45,11 @@ public abstract class TypedLocalMaterials extends DefaultTask{
     @PathSensitive(PathSensitivity.RELATIVE)
     public abstract DirectoryProperty getInputDirectory();
 
-    @Internal
+    /**
+     * The directory this task generates sources into. This directory is owned by this task;
+     * its contents are deleted before each generation (so that deleted materials don't leave stale classes behind)
+     */
+    @OutputDirectory
     public abstract DirectoryProperty getOutputSourcesRoot();
 
     /**
@@ -57,7 +65,7 @@ public abstract class TypedLocalMaterials extends DefaultTask{
     @OutputFile
     public abstract RegularFileProperty getBuiltFilesRecordFile();
 
-    @OutputDirectory
+    @Internal
     public Provider<Directory> getOutputDirectory(){
         return getOutputSourcesRoot().dir(getOutputPackage().map(outputPackage -> outputPackage.replace(".", "/")));
     }
@@ -65,6 +73,8 @@ public abstract class TypedLocalMaterials extends DefaultTask{
     @TaskAction
     public void createTypedMaterials() throws IOException{
         List<String> fullyQualifiedMaterialClasses = new ArrayList<>();
+
+        getFileSystemOperations().delete(spec -> spec.delete(getOutputSourcesRoot()));
 
         File outputDirectory = getOutputDirectory().get().getAsFile();
         new File(outputDirectory, "wrapper").mkdirs();

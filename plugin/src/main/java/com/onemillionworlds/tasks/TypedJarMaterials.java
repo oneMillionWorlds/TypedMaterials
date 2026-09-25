@@ -5,6 +5,7 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.FileSystemOperations;
 import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
@@ -32,7 +33,7 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-@DisableCachingByDefault(because = "Generates source files directly into the project; quicker to regenerate than to fetch from a cache")
+@DisableCachingByDefault(because = "Generation is cheap; quicker to regenerate than to fetch from a cache")
 public abstract class TypedJarMaterials extends DefaultTask{
 
     @Inject
@@ -40,10 +41,17 @@ public abstract class TypedJarMaterials extends DefaultTask{
         getBuiltFilesRecordFile().convention(layout.getBuildDirectory().file("typedMaterials/" + getName()));
     }
 
+    @Inject
+    protected abstract FileSystemOperations getFileSystemOperations();
+
     @Input
     public abstract Property<String> getOutputPackage();
 
-    @Internal
+    /**
+     * The directory this task generates sources into. This directory is owned by this task;
+     * its contents are deleted before each generation (so that deleted materials don't leave stale classes behind)
+     */
+    @OutputDirectory
     public abstract DirectoryProperty getOutputSourcesRoot();
 
     @Input
@@ -63,7 +71,7 @@ public abstract class TypedJarMaterials extends DefaultTask{
     @OutputFile
     public abstract RegularFileProperty getBuiltFilesRecordFile();
 
-    @OutputDirectory
+    @Internal
     public Provider<Directory> getOutputDirectory(){
         return getOutputSourcesRoot().dir(getOutputPackage().map(outputPackage -> outputPackage.replace(".", "/")));
     }
@@ -73,6 +81,7 @@ public abstract class TypedJarMaterials extends DefaultTask{
 
         Pattern pattern = Pattern.compile(getJarFilterRegex().get());
         String outputPackage = getOutputPackage().get();
+        getFileSystemOperations().delete(spec -> spec.delete(getOutputSourcesRoot()));
         File outputDirectory = getOutputDirectory().get().getAsFile();
         File outputDirectoryWrapper = new File(outputDirectory, "wrapper");
         outputDirectoryWrapper.mkdirs();

@@ -80,7 +80,7 @@ public class ComplexMultimoduleAssetsFunctionalTest extends FunctionalTestBase{
                     
                         dependsOn sourceModule.tasks.named('processResources')
                         from sourceModule.file(sourceFilePath) // Reference the file within the source module
-                        into "${buildDir}/typedMaterials/localMaterials" // Destination folder in build directory
+                        into layout.buildDirectory.dir("typedMaterials/localMaterials") // Destination folder in build directory
                     }
                     
                     tasks.named('processResources') {
@@ -93,24 +93,21 @@ public class ComplexMultimoduleAssetsFunctionalTest extends FunctionalTestBase{
                     
                         dependsOn sourceModule.tasks.named('processResources')
                         from sourceModule.file(sourceFilePath) // Reference the file within the source module
-                        into "${buildDir}/typedMaterials/jmeMaterials" // Destination folder in build directory
+                        into layout.buildDirectory.dir("typedMaterials/jmeMaterials") // Destination folder in build directory
                     }
                     
                     tasks.register('generateAssetsConstant', AssetConstants) {
                         dependsOn 'copyTypedJarMaterialsFile'
                         dependsOn 'copyTypedLocalMaterialsFile'
                         assetFlatFiles = files(
-                        "${buildDir}/typedMaterials/jmeMaterials/com_onemillionworlds_typedmaterials_assets.txt",
-                        "${buildDir}/typedMaterials/localMaterials/com_onemillionworlds_typedmaterials_assets.txt")
+                            layout.buildDirectory.file("typedMaterials/jmeMaterials/com_onemillionworlds_typedmaterials_assets.txt"),
+                            layout.buildDirectory.file("typedMaterials/localMaterials/com_onemillionworlds_typedmaterials_assets.txt"))
                         fullyQualifiedAssetsClass = 'com.myproject.assets.Assets'
-                        outputSourcesRoot = file("${projectDir}/src/main/generatedtypedmaterials/java")
+                        outputSourcesRoot = layout.buildDirectory.dir("generated/sources/assetsConstant")
                     }
-                    
-                    tasks.named('compileJava') {
-                        dependsOn 'generateAssetsConstant'
-                    }
-                    
-                    sourceSets.main.java.srcDirs += 'src/main/generatedtypedmaterials/java'
+
+                    // Registering the task's output as a source directory also makes compilation depend on the task
+                    sourceSets.main.java.srcDir(tasks.named('generateAssetsConstant').flatMap { it.outputSourcesRoot })
                     
                     """);
 
@@ -131,7 +128,7 @@ public class ComplexMultimoduleAssetsFunctionalTest extends FunctionalTestBase{
         runner.withProjectDir(projectDir);
         BuildResult result = runner.build();
 
-        String content = Files.readString(getGeneratedJavaFile("com/myproject/assets/Assets.java").toPath());
+        String content = Files.readString(new File(projectDir, "build/generated/sources/assetsConstant/com/myproject/assets/Assets.java").toPath());
 
         String expected = """
                 package com.myproject.assets;

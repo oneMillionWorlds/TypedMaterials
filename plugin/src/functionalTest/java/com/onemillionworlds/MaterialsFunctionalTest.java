@@ -97,7 +97,7 @@ class MaterialsFunctionalTest extends FunctionalTestBase{
         runner.withProjectDir(projectDir);
         runner.build();
 
-        File lightingMaterial = getGeneratedJavaFile("org/jme3/core/materials/LightingMaterial.java");
+        File lightingMaterial = getGeneratedJavaFile("jmeCoreMaterials", "org/jme3/core/materials/LightingMaterial.java");
         assertTrue(lightingMaterial.exists());
         String content = Files.readString(lightingMaterial.toPath());
 
@@ -159,7 +159,7 @@ class MaterialsFunctionalTest extends FunctionalTestBase{
         assembleRunner.withProjectDir(projectDir);
         assembleRunner.build();
 
-        File lightingMaterial = getGeneratedJavaFile("org/jme3/core/materials/LightingMaterial.java");
+        File lightingMaterial = getGeneratedJavaFile("jmeCoreMaterials", "org/jme3/core/materials/LightingMaterial.java");
         assertTrue(lightingMaterial.exists());
 
         GradleRunner cleanRunner = GradleRunner.create();
@@ -205,7 +205,7 @@ class MaterialsFunctionalTest extends FunctionalTestBase{
         assertNotNull(localMaterialsTask);
         assertEquals(localMaterialsTask.getOutcome(), TaskOutcome.SUCCESS);
 
-        File powerMeterMaterial = getGeneratedJavaFile("com/myproject/materials/PowerMeterMaterial.java");
+        File powerMeterMaterial = getGeneratedJavaFile("localTypedMaterials", "com/myproject/materials/PowerMeterMaterial.java");
         assertTrue(powerMeterMaterial.exists());
         String content = Files.readString(powerMeterMaterial.toPath());
 
@@ -284,7 +284,7 @@ class MaterialsFunctionalTest extends FunctionalTestBase{
         assertNotNull(localMaterialsTask);
         assertEquals(localMaterialsTask.getOutcome(), TaskOutcome.SUCCESS);
 
-        File powerMeterMaterial = getGeneratedJavaFile("com/myproject/materials/PowerMeterMaterial.java");
+        File powerMeterMaterial = getGeneratedJavaFile("localTypedMaterials", "com/myproject/materials/PowerMeterMaterial.java");
         assertTrue(powerMeterMaterial.exists());
         String content = Files.readString(powerMeterMaterial.toPath());
 

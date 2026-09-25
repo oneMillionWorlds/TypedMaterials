@@ -10,7 +10,7 @@ import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
@@ -19,6 +19,7 @@ import org.gradle.work.DisableCachingByDefault;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -29,10 +30,14 @@ import java.util.stream.Stream;
  * (Mostly this task is used internally by the plugin)
  * </p>
  */
-@DisableCachingByDefault(because = "Generates source files directly into the project; quicker to regenerate than to fetch from a cache")
+@DisableCachingByDefault(because = "Generation is cheap; quicker to regenerate than to fetch from a cache")
 public abstract class MaterialFactoryTask extends DefaultTask{
 
-    @Internal
+    /**
+     * The directory this task generates the factory into. It should not be shared with any
+     * other task, so that Gradle can remove stale outputs (e.g. from deleted materials)
+     */
+    @OutputDirectory
     public abstract DirectoryProperty getOutputSourcesRoot();
 
     @Input
@@ -67,14 +72,16 @@ public abstract class MaterialFactoryTask extends DefaultTask{
         );
 
         try{
-            Files.writeString(getOutputFile().get().getAsFile().toPath(), content);
+            Path destination = getOutputFile().get().getAsFile().toPath();
+            Files.createDirectories(destination.getParent());
+            Files.writeString(destination, content);
         } catch(IOException e){
             throw new RuntimeException(e);
         }
 
     }
 
-    @OutputFile
+    @Internal
     public Provider<RegularFile> getOutputFile(){
         return getOutputSourcesRoot().file(getFullyQualifiedOutputClass().map(fqcn -> fqcn.replace(".", "/") + ".java"));
     }

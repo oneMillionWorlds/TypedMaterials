@@ -56,7 +56,7 @@ public class GeneratedResourcesAssetsFunctionalTest extends FunctionalTestBase{
         runner.withProjectDir(projectDir);
         BuildResult result = runner.build();
 
-        String content = Files.readString(getGeneratedResourcesFile("com_onemillionworlds_typedmaterials_assets.txt").toPath());
+        String content = Files.readString(getGeneratedResourcesFile("assetsFile", "com_onemillionworlds_typedmaterials_assets.txt").toPath());
 
         String expectedValue = """
                 copySource.txt

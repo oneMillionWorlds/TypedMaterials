@@ -26,7 +26,7 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
                         mavenCentral()
                     }
                     typedMaterials{
-                      assetConstants('com.myproject.assets.Assets')
+                      assetsConstant('com.myproject.assets.Assets')
                     }
                     """);
 
@@ -60,7 +60,7 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
         runner.withProjectDir(projectDir);
         BuildResult result = runner.build();
 
-        File assetsFile = getGeneratedJavaFile("com/myproject/assets/Assets.java");
+        File assetsFile = getGeneratedJavaFile("assetConstants", "com/myproject/assets/Assets.java");
 
         String content = Files.readString(assetsFile.toPath());
 
@@ -126,7 +126,7 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
                         mavenCentral()
                     }
                     typedMaterials{
-                      assetConstants('com.myproject.assets.Assets')
+                      assetsConstant('com.myproject.assets.Assets')
                     }
                     """);
 
@@ -157,7 +157,7 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
         runner.withProjectDir(projectDir);
         BuildResult result = runner.build();
 
-        String content = Files.readString(getGeneratedJavaFile("com/myproject/assets/Assets.java").toPath());
+        String content = Files.readString(getGeneratedJavaFile("assetConstants", "com/myproject/assets/Assets.java").toPath());
 
 
         String expectedTexturesSection = """
@@ -239,7 +239,7 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
         runner.withProjectDir(projectDir);
         BuildResult result = runner.build();
 
-        String content = Files.readString(getGeneratedResourcesFile("com_onemillionworlds_typedmaterials_assets.txt").toPath());
+        String content = Files.readString(getGeneratedResourcesFile("assetsFile", "com_onemillionworlds_typedmaterials_assets.txt").toPath());
 
         String expectedTexturesSection = """
                 A/B/texture1.json
@@ -283,7 +283,7 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
         runner.withProjectDir(projectDir);
         runner.build();
 
-        String content = Files.readString(getGeneratedResourcesFile("com_onemillionworlds_typedmaterials_assets.txt").toPath());
+        String content = Files.readString(getGeneratedResourcesFile("assetsFile", "com_onemillionworlds_typedmaterials_assets.txt").toPath());
 
         String expectedAssetsSection = """
                 ::jme3-core-3.6.1-stable
@@ -332,7 +332,7 @@ public class AssetsFunctionalTest extends FunctionalTestBase{
         runner.withProjectDir(projectDir);
         runner.build();
 
-        File assetsFile = getGeneratedResourcesFile("com_onemillionworlds_typedmaterials_assets.txt");
+        File assetsFile = getGeneratedResourcesFile("assetsFile", "com_onemillionworlds_typedmaterials_assets.txt");
 
         String content = Files.readString(assetsFile.toPath());
 
