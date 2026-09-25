@@ -6,7 +6,6 @@ plugins {
 }
 
 group = "com.onemillionworlds"
-version = "2.0.0"
 
 repositories {
     mavenCentral()
@@ -100,16 +99,34 @@ publishing {
     }
     repositories {
         maven {
-            name = "sonatype"
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            credentials {
-                username = providers.gradleProperty("ossrhUsername").getOrElse("")
-                password = providers.gradleProperty("ossrhPassword").getOrElse("")
-            }
+            name = "CentralPortalStaging"
+            url = uri(rootProject.layout.buildDirectory.dir("central-portal-staging"))
         }
     }
 }
 
+// The root project's publishAllToCentralPortalStaging cleans the staging directory first, make sure that happens before
+// (not after) publishing into it
+tasks.withType<PublishToMavenRepository>()
+    .matching { it.name.endsWith("ToCentralPortalStagingRepository") }
+    .configureEach { mustRunAfter(":cleanCentralPortalStaging") }
+
 signing {
-    sign(publishing.publications["mavenJava"])
+    // Fallback: inject signing.keyId from environment if not provided via properties
+    if (!project.hasProperty("signing.keyId")) {
+        val envKeyId = System.getenv("SIGNING_KEY_ID")
+        if (!envKeyId.isNullOrBlank()) {
+            project.extra.set("signing.keyId", envKeyId.trim())
+        }
+    }
+
+    // Only sign when a key is actually configured. Unconditional signing makes publishToMavenLocal fail on a
+    // dev machine with no GPG key, because the publication then references .asc files that were never produced.
+    val hasSigningKey = project.hasProperty("signing.keyId")
+    if (hasSigningKey) {
+        sign(publishing.publications["mavenJava"])
+    }
+    // The plugin-publish plugin signs its own publications (the plugin and its marker) whenever the signing plugin is
+    // applied, so also let those skip signing when there is no key
+    isRequired = hasSigningKey
 }
